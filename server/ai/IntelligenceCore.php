@@ -2,6 +2,15 @@
 namespace Cartographica\AI;
 use Cartographica\Core\RedisBus;
 
+/*
+
+The Distributed Intelligence Architecture
+Since you have no dependencies, you can use the shmop and pcntl extensions (built into PHP) to create a Global Knowledge Store.
+- Authority Server: Handles the "Physics." It writes the player_x, player_y and input_variance to shared memory.
+- AI Module: A separate long-running process that reads that memory, runs the "Theory of Mind" logic, and writes back ai_action commands.
+
+*/
+
 class IntelligenceCore {
     private RedisBus $bus;
     private array $islandGraph = []; // Global map of islands

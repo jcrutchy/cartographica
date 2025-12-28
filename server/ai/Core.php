@@ -11,6 +11,53 @@ The Cartographica AI Core Engine
 This script is your main entry point. It should be run in a persistent CLI process.
 */
 
+
+
+
+/*
+Pure PHP Class for Shared Memory (shmop)? This would let your Authority Server and AI Module talk to each other without the overhead of a WebSocket or a heavy database.
+*/
+
+
+
+
+/*
+The Core Event Loop (Non-Blocking)
+To make your AI feel "live" rather than scripted, your main loop must use socket_select. This
+prevents the AI from "freezing" while waiting for a network packet from an island or a Sentinel.
+*/
+
+// Core logic for a dependency-free AI Loop
+$sockets = [$ipc_socket, $remote_island_socket];
+$write = $except = null;
+
+while (true) {
+    $read = $sockets;
+    // socket_select waits for any event (0 sec timeout for a pure game loop)
+    if (socket_select($read, $write, $except, 0) > 0) {
+        foreach ($read as $socket) {
+            $data = socket_read($socket, 2048);
+            $event = json_decode($data, true);
+            
+            // Handle the Discussed Features
+            if ($event['type'] === 'ANOMALY') {
+                $this->triggerSentinelSwarm($event['target_id']);
+            } elseif ($event['type'] === 'DISCOVERY') {
+                $this->updateMacroGraph($event['island_id']);
+            }
+        }
+    }
+    
+    // Run AI "Thinking" (Theory of Mind, Gossip updates)
+    $this->think();
+    usleep(16000); // Maintain ~60Hz "Intelligence" tick rate
+}
+
+
+
+
+
+
 class Core {
     private string $socketPath;
     private array $teams = [];       // [team_id => KnowledgeStore]
