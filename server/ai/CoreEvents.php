@@ -19,21 +19,41 @@ public function startEventListener() {
 }
 
 private function handleGlobalEvent(array $event) {
-    switch ($event['event']) {
-        case 'HACKER_ALERT':
-            // All Sentinels globally increase vigilance
-            $this->sentinelManager->alertSwarm($event['payload']['signature']);
-            break;
 
-        case 'TECH_DISCOVERY':
-            // Update the global Archetype DNA
-            $this->archetypeManager->evolve($event['payload']['tech_id']);
-            break;
-
-        case 'HELP_REQUEST':
-            // Find nearby NPCs to assist
-            $this->unitCoordinator->dispatchReinforcements($event['payload']['coords']);
-            break;
+    while (true) {
+        // 1. Process standard game ticks (Movement/Combat)
+        $this->processIpcTicks();
+    
+        // 2. Process Global Events (The "News")
+        if ($event = $this->eventBus->getNext()) {
+            switch($event['type']) {
+    
+    
+                case 'HACKER_ALERT':
+                    // All Sentinels globally increase vigilance
+                    $this->sentinelManager->alertSwarm($event['payload']['signature']);
+                    break;
+        
+                case 'TECH_DISCOVERY':
+                    // Update the global Archetype DNA
+                    $this->archetypeManager->evolve($event['payload']['tech_id']);
+                    break;
+        
+                case 'HELP_REQUEST':
+                    // Find nearby NPCs to assist
+                    $this->unitCoordinator->dispatchReinforcements($event['payload']['coords']);
+                    break;
+        
+                case 'NEW_ISLAND':
+                    $this->updateMacroGraph($event['data']);
+                    break;
+        
+                case 'TECH_UPGRADE':
+                    $this->evolveArchetypes($event['data']);
+                    break;
+        
+            }
+        }
     }
 }
 
@@ -44,23 +64,15 @@ private function handleGlobalEvent(array $event) {
 
 /*
 
-Hierarchical Pathfinding (The Infinite Graph)
-To handle pathfinding across an infinite graph of islands, we don't calculate every tile.
-We calculate Nodes (Islands) and Edges (Bridges).
 
-*/
+Why this makes Cartographica "Uniquely Intelligent":
+Instead of NPCs just following individual scripts, they are part of a Global Information Network.
+An event on Island A can cause an NPC on Island Z to change its long-term goals. This creates a
+"Grand Strategy" layer that emerges naturally from the ground up.
+
+Would you like me to create the "Messenger Archetype"? This is a specialized NPC that physically
+carries these "Event Packets" between islands for a more immersive, "non-instant" information flow.
 
 
-/**
- * Macro-Pathfinding for the Infinite Graph
- */
-public function getMacroPath(string $startNode, string $targetNode) {
-    // 1. Get the current 'World Graph' from the Authority's Knowledge Store
-    $graph = $this->authority->getKnownIslands();
-    
-    // 2. Perform A* on Island IDs only (not tiles)
-    $islandSequence = $this->astar->search($graph, $startNode, $targetNode);
-    
-    // 3. Return a list of 'Portal' or 'Bridge' coordinates for the NPC
-    return $islandSequence; 
-}
+
+

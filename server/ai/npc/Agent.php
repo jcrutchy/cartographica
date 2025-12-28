@@ -145,6 +145,25 @@ class Agent {
         }
     }
 
+    // Inside Agent.php
+
+    /*
+    Use Case: Real-time Game Balancing
+    Imagine a "Game Master" or an automated balance script on the Authority Server notices that Scouts are dying too quickly.
+    The Authority sends: {"type":"ADMIN", "action":"SET_TRAIT", "target":"scout", "key":"caution", "value":0.9}.
+    The AI Module updates the archetypes.json.
+    Every newly spawned Scout now has 0.9 caution.
+    Optionally, the Authority can loop through active units and send MODIFY_INSTANCE to update those currently in the field.
+    */
+    
+    public function setTrait(string $key, float $value): void {
+        $this->traits[$key] = max(0, min(1, $value));
+    }
+    
+    public function getTrait(string $key): float {
+        return $this->traits[$key] ?? 0.5;
+    }
+
     /*
     Serialization & Persistence
     We add save() and load() to the Agent class so that brains aren't lost on restart.
@@ -165,6 +184,35 @@ class Agent {
         $agent->memory = $data['memory'];
         return $agent;
     }
+
+
+
+/*
+Constant Evolution (The "Continuous Integration" of AI)
+To ensure constant evolution across all units, we implement Background Mutation. Even when an NPC is
+performing well, we slightly "vibrate" its weights to see if it can find an even better strategy.
+*/
+    public function tickEvolution(): void {
+        // 0.1% chance every tick to drift a weight slightly
+        if (mt_rand(1, 1000) === 1) {
+            $this->mutate(0.01); 
+        }
+    }
+
+/*
+The "Smarter" Result:
+Distributed Learning: If a player finds an exploit on Server 1, the NPCs there die, learn from it,
+and update the Global Knowledge Store. When the player moves to Server 2, the NPCs there already
+have the "Patch" in their shared memory.
+Dynamic Diplomacy: A Human player gives gold to an AI unit. The Authority sends an ADMIN command:
+ADD_TRUST. The AI unit’s brain now receives a "Friendly" signal, changing its behavior from "Combat"
+to "Trade."
+NPC Politics: Two AI factions might start a war because their aggression traits mutated upward
+simultaneously, leading to a "trust death spiral."
+*/
+
+
+
 
 }
 

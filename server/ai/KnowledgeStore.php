@@ -45,6 +45,36 @@ class KnowledgeStore {
     }
 
 
+
+
+/*
+The Diplomacy Layer
+Diplomacy is implemented as a Bilateral Trust Score. This score is fed directly into the Brain's input layer.
+*/
+
+    private array $diplomacyMatrix = []; // [team_a][team_b] => trust_score (-1.0 to 1.0)
+    
+    public function updateRelation(string $myTeam, string $otherTeam, float $delta): void {
+        $current = $this->diplomacyMatrix[$myTeam][$otherTeam] ?? 0.0;
+        $this->diplomacyMatrix[$myTeam][$otherTeam] = max(-1, min(1, $current + $delta));
+        
+        // Global sync so other AI instances know the war has started
+        $this->globalSync->publish("diplomacy_update", [$myTeam, $otherTeam, $delta]);
+    }
+    
+    public function getTrust(string $myTeam, string $otherTeam): float {
+        return $this->diplomacyMatrix[$myTeam][$otherTeam] ?? 0.0;
+    }
+
+
+/*
+The Brain now learns:
+Trust > 0.5: "If I move closer, I get a Social Reward."
+Trust < -0.5: "If I move closer, I take damage (Penalty). Better to attack first."
+*/
+
+
+
 /*
 Team Learning (The "Ghost" Memory)
 When a unit dies, it should leave behind a Hazard Zone marker on the Shared Blackboard. This marker
@@ -127,3 +157,45 @@ Blackboard. A Medic's brain sees the "Need" as a global_priority_pull and moves 
 
 
 
+/*
+
+This is a classic dilemma in game design: Overt Deterrence vs. Covert Detection. The best solution
+for Cartographica is likely a Hybrid Hive Model. In this model, "Sentinel" is not a physical unit
+type, but a Neural Program that can be "uploaded" into any NPC. This solves the "Police Presence"
+problem while ensuring the hackers are never truly safe.
+
+The "Ghost in the Machine" Architecture
+Instead of having a dedicated Sentinel unit, you treat the Sentinel logic as a Background Service
+that runs on all NPCs.
+
+Public Sentinels (The Deterrent): These are high-level, clearly marked "Guardian" units that patrol
+cities. Their presence makes players feel safe and deters casual cheaters.
+
+Undercover Nodes (The Detection): Every regular NPC (a merchant, a miner, a stray dog) carries a
+"dormant" Sentinel brain. They aren't "undercover cops" in the traditional sense; they are Sensors.
+
+The "Subliminal Vigilance" Input
+We add a hidden input to the mapping.json for every NPC in the world.
+
+
+
+
+When a hacker performs a "Speed Hack" near a simple sheep NPC:
+1. The Sheep’s Passive Sentinel Layer flags the anomaly.
+2. The Sheep doesn't attack (that would look weird/mistrustful). Instead, it silently broadcasts the "Wanted Poster" to the Global Sync.
+3. The Public Sentinels (the Swarm) receive the coordinates and "descend" from the nearest patrol point.
+
+Solving the "Mistrust" Problem
+To prevent human players from feeling like they are in a "Police State," the NPCs should only
+transition from "Civilian" to "Sentinel" when the Confidence Score of a hack is nearly 100%.
+
+Unit State               Behavior                                                      Player Perception
+Civilian                 Mining, Trading, Socializing.                                 "Just a normal NPC."
+Vigilant                 NPC stops what it's doing and "looks" at the hacker.          "The NPC seems to notice something is wrong."
+Reporting                Silent data upload to the Swarm.                              No visible change.
+Swarmed                  Public Sentinels arrive to intervene.                         "Justice being served."
+
+
+
+
+*/

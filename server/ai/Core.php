@@ -9,7 +9,6 @@ and "Team Memory" is serialized to disk.
 
 The Cartographica AI Core Engine
 This script is your main entry point. It should be run in a persistent CLI process.
-
 */
 
 class Core {
@@ -57,6 +56,34 @@ class Core {
         }
     }
 
+/*
+Benefits for your MMO
+Zero Downtime: You can introduce "Holiday Event" archetypes or re-balance combat units without
+kicking players.
+Remote Debugging: Your Authority Server can "ping" a unit's brain via an admin command to retrieve
+its current memory_state for real-time visualization in your dev console.
+World Events: If a "Plague" event starts, you can globally decrease the vitality trait of all NPCs
+via one IPC command.
+*/
+
+    while (true) {
+        $line = fgets($client);
+        if ($line) {
+            $packet = json_decode($line, true);
+            
+            if (($packet['type'] ?? '') === 'ADMIN') {
+                $response = $this->handleAdminPacket($packet);
+            } else {
+                $response = $this->handlePacket($packet);
+            }
+            
+            if ($response) {
+                fwrite($client, json_encode($response) . PHP_EOL);
+            }
+        }
+        usleep(5000);
+    }
+
     private function handlePacket(array $pkt): ?array {
         $unitId = $pkt['id'];
         $teamId = $pkt['team_id'];
@@ -92,6 +119,34 @@ class Core {
         $inputs = $this->compileInputs($agent, $pkt, $store, $coord);
         $vector = $agent->think($inputs);
 
+
+
+
+/*
+To scale this for a distributed MMO, we need to transition from a single local AI process to a
+Decentralized AI Cluster. This allows multiple AI Module instances to communicate via a Global Sync
+Layer (like Redis or a shared Database) so that an NPC "learning" on Server A can share its
+experience with an NPC on Server B.
+We will also add the Diplomacy Layer, which treats "Relationships" as a dynamic weight that
+influences the Neural Network's perception.
+The Distributed AI Architecture
+In a multi-authority setup, units might migrate between servers. We use a Global Brain Repository to
+ensure their "soul" follows them.
+*/
+        // Inside Core.php -> handlePacket()
+        // When a unit appears on a new authority server, the AI Module pulls its latest "DNA"
+        if (!isset($this->agents[$unitId])) {
+            $brainData = $this->globalSync->get("brain:$unitId"); 
+            if ($brainData) {
+                $this->agents[$unitId] = Agent::fromSerialized($brainData);
+            } else {
+                $this->spawn($unitId, $type); // Fresh start if new
+            }
+        }
+
+
+
+
         // 6. Return high-level command to Authority
         return [
             'id' => $unitId,
@@ -117,6 +172,134 @@ class Core {
         }
         echo "[Persistence] All agent and team states synced to disk.\n";
     }
+
+    // Inside the Core class in AgentProcessor.php
+    /*
+    // Example Admin Packets (Authority -> AI Module)
+    { "type": "ADMIN", "action": "SET_TRAIT", "target": "warrior", "key": "aggressiveness", "value": 0.95 }
+    { "type": "ADMIN", "action": "DELETE_ARCHETYPE", "target": "old_unit_v1" }
+    { "type": "ADMIN", "action": "MUTATE_INSTANCE", "unit_id": "npc_44", "rate": 0.5 }
+    */
+    private function handleAdminPacket(array $pkt): array {
+        $action = $pkt['action'] ?? '';
+        
+        switch ($action) {
+            case 'SET_TRAIT':
+                // Update the live config in memory
+                $target = $pkt['target']; // e.g., 'scout'
+                $this->config['archetypes'][$target]['traits'][$pkt['key']] = $pkt['value'];
+                
+                // Persist the schema change to disk
+                $this->saveConfig();
+                return ['status' => 'success', 'msg' => "Archetype $target updated"];
+    
+            case 'ADD_ARCHETYPE':
+                $this->config['archetypes'][$pkt['name']] = $pkt['data'];
+                $this->saveConfig();
+                return ['status' => 'success', 'msg' => "New archetype {$pkt['name']} registered"];
+    
+            case 'DELETE_ARCHETYPE':
+                unset($this->config['archetypes'][$pkt['target']]);
+                $this->saveConfig();
+                return ['status' => 'success'];
+    
+            case 'MODIFY_INSTANCE':
+                // Direct tweak to a live unit's traits (e.g., for a status effect)
+                if (isset($this->agents[$pkt['unit_id']])) {
+                    $this->agents[$pkt['unit_id']]->setTrait($pkt['key'], $pkt['value']);
+                    return ['status' => 'success', 'unit' => $pkt['unit_id']];
+                }
+                return ['status' => 'error', 'msg' => 'Unit not found'];
+    
+            case 'RESET_KNOWLEDGE':
+                // Clear hazards or specific team memories
+                $teamId = $pkt['team_id'];
+                if (isset($this->teams[$teamId])) {
+                    $this->teams[$teamId]->clearCategory($pkt['category']); // e.g., 'hazards'
+                    return ['status' => 'success'];
+                }
+                break;
+        }
+        
+        return ['status' => 'unknown_admin_command'];
+    }
+    
+    private function saveConfig(): void {
+        // Atomic save for the JSON schema
+        file_put_contents('./config/archetypes.json', json_encode($this->config, JSON_PRETTY_PRINT));
+    }
+
+
+
+
+/*
+To make your NPCs "learn to play the game" in a way that feels organic and increasingly challenging
+for players, we need to transition from simple reaction to Adaptive Strategy.
+This involves two layers of learning: Individual Experience (the unit learns how to survive) and
+Evolutionary Selection (the team learns which unit types are most effective).
+The Individual Learning Loop (Experiential)
+Each NPC uses Temporal Difference (TD) Learning. This means the NPC evaluates its current state
+against its previous state to see if its actions are moving it closer to a "Win Condition."
+- Positive Reinforcement: Successful mining, healing an ally, or dealing damage.
+- Negative Reinforcement: Taking damage, hitting a dead end, or idling while resources are available.
+In our PHP module, the Agent uses the last_reward from the Authority to adjust its weights. Over
+time, the "Paths" in its neural network that lead to rewards become "Highways," while paths leading
+to damage are "Pruned."
+
+The Evolutionary Manager (Generational)
+To make the population smarter, we implement a Genetic Algorithm. Instead of keeping every brain
+forever, the AI Module periodically replaces the "worst" brains with clones of the "best" brains
+(with slight mutations).
+
+Emergent "Pro-Player" Behaviors
+As these systems run, you will start to see NPCs doing things you never explicitly programmed:
+- Kiting: A ranger unit learns that moving away while the "Combat" neuron is firing keeps its
+"HP Reward" high while maintaining its "Damage Reward."
+- Body Blocking: Warriors might learn that standing between a Medic and an Enemy yields a
+"Team Survival" bonus.
+- Resource Denying: Units might learn to congregate around a gold mine even if they aren't mining,
+simply because preventing "Enemy Proximity" near resources yields a higher team-wide fitness score.
+
+The "Smarter Over Time" JSON Strategy
+You can assist this learning by feeding more complex data into the mapping.json as the game world
+ages.
+- Early Game: Inputs are simple (Health, Distance to Enemy).
+- Mid Game: Add inputs like "Ally Formation Density" or "Enemy Weapon Type."
+- Late Game: Add inputs like "Projected Enemy Path" or "Resource Scarcity Index."
+How to Implement This Now
+1. Define Fitness: Tell the Authority Server what a "Win" looks like for each NPC (e.g.,
+Gold_Gathered * 10 + Survival_Time).
+2. Send Rewards: Ensure every TICK packet includes the delta of that fitness.
+3. Run Cycles: Use your AIController to trigger a REPRODUCTION_CYCLE via the Admin IPC once every
+24 hours.
+*/
+
+
+
+    public function runEvolutionCycle(string $archetype): void {
+        // 1. Gather all agents of this type
+        $candidates = $this->getAgentsByType($archetype);
+        
+        // 2. Sort by Fitness (Survival Time + Gold Gathered + Kills)
+        usort($candidates, fn($a, $b) => $b->fitness <=> $a->fitness);
+        
+        // 3. The "Cull": Remove the bottom 20%
+        $cullCount = count($candidates) * 0.2;
+        for ($i = 0; $i < $cullCount; $i++) {
+            $weakest = array_pop($candidates);
+            $this->deleteAgent($weakest->id);
+        }
+        
+        // 4. The "Reproduction": Clone the Top 20% with mutations
+        foreach (array_slice($candidates, 0, $cullCount) as $elite) {
+            $newId = "gen_" . bin2hex(random_bytes(4));
+            $offspring = clone $elite;
+            $offspring->mutate(0.1); // 10% mutation rate
+            $this->agents[$newId] = $offspring;
+        }
+    }
+
+
 }
 
 

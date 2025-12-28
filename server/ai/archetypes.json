@@ -8,5 +8,11 @@
     "traits": { "aggressiveness": 0.9, "expansionist": 0.2, "caution": 0.7, "memory_retention": 0.3 },
     "inputs": 6,
     "outputs": 3
+  },
+  "sentinel": {
+    "traits": { "vigilance": 0.95, "aggression": 0.4, "cooperation": 0.9, "persistence": 1.0 },
+    "inputs": 12,
+    "outputs": 6,
+    "special_logic": "pattern_recognition"
   }
 }
