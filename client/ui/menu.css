@@ -1,0 +1,64 @@
+#menu-root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* menu panels will override this */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50; /* below UI panels, above canvas */
+}
+
+.menu-panel {
+    width: 420px;
+    margin: 0 auto;
+    padding: 32px 28px;
+
+    /* Soft parchment-like background */
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.7), rgba(240,230,210,0.7)),
+        repeating-linear-gradient(
+            45deg,
+            rgba(255,255,255,0.05) 0px,
+            rgba(255,255,255,0.05) 4px,
+            rgba(0,0,0,0.03) 4px,
+            rgba(0,0,0,0.03) 8px
+        );
+    background-blend-mode: overlay;
+
+    /* Border + depth */
+    border: 2px solid #b79a6b;
+    border-radius: 12px;
+    box-shadow:
+        0 6px 18px rgba(0,0,0,0.35),
+        inset 0 0 20px rgba(0,0,0,0.15);
+}
+
+.menu-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+}
+
+.menu-button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #eee;
+    cursor: pointer;
+}
+
+.menu-button:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.menu-button:active {
+    transform: scale(0.97);
+}

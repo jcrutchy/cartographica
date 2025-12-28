@@ -1,0 +1,21 @@
+{
+  "inputs": [
+    { "name": "hp_percent", "source": "local", "key": "hp" },
+    { "name": "threat_nearby", "source": "local", "key": "enemy_dist" },
+    { "name": "resource_exhausted", "source": "local", "key": "current_node_empty" },
+    { "name": "nearest_medic_signal", "source": "blackboard", "query": "findNearest", "params": ["medic"] },
+    { "name": "safe_zone_signal", "source": "blackboard", "query": "findNearest", "params": ["safe_point"] },
+    { "name": "nearest_resource_node", "source": "blackboard", "query": "findNearest", "params": ["mining_node"] },
+    { "name": "local_hp", "source": "local", "key": "hp" },
+    { "name": "team_danger_sense", "source": "blackboard", "query": "getHazardMultiplier" },
+    { "name": "global_priority_pull", "source": "blackboard", "query": "getGlobalUrgency" },
+    { "name": "nearest_resource", "source": "blackboard", "query": "findNearest", "params": ["gold"] }
+  ],
+  "outputs": [
+    "move_to_target",
+    "interact_action",
+    "combat_stance",
+    "work",
+    "retreat"
+  ]
+}

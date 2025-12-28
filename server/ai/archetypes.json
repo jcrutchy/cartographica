@@ -1,0 +1,12 @@
+{
+  "scout": {
+    "traits": { "aggressiveness": 0.1, "expansionist": 0.9, "caution": 0.4, "memory_retention": 0.8 },
+    "inputs": 6,
+    "outputs": 3
+  },
+  "warrior": {
+    "traits": { "aggressiveness": 0.9, "expansionist": 0.2, "caution": 0.7, "memory_retention": 0.3 },
+    "inputs": 6,
+    "outputs": 3
+  }
+}

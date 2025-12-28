@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>WebSocket Test</title>
+<style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+    #log { background: #000; padding: 10px; height: 300px; overflow-y: auto; border: 1px solid #444; }
+    input, button { font-size: 16px; }
+</style>
+</head>
+<body>
+
+<h2>WebSocket Test Client</h2>
+
+<input id="url" value="ws://localhost:8080" style="width: 300px;">
+<button id="connect">Connect</button>
+
+<div id="log"></div>
+
+<input id="msg" placeholder="Message…" style="width: 300px;">
+<button id="send">Send</button>
+<button id="ping">Ping</button>
+<button id="close">Close</button>
+
+<script>
+let ws;
+
+function log(msg) {
+    const box = document.getElementById("log");
+    box.textContent += msg + "\n";
+    box.scrollTop = box.scrollHeight;
+}
+
+document.getElementById("connect").onclick = () => {
+    const url = document.getElementById("url").value;
+    ws = new WebSocket(url);
+
+    ws.onopen = () => log("[open]");
+    ws.onclose = e => log("[close] code=" + e.code + " reason=" + e.reason);
+    ws.onerror = e => log("[error] " + e);
+    ws.onmessage = e => log("[message] " + e.data);
+
+    // browser automatically responds to ping with pong
+};
+
+document.getElementById("send").onclick = () => {
+    const text = document.getElementById("msg").value;
+    ws.send(text);
+    log("[sent] " + text);
+};
+
+document.getElementById("ping").onclick = () => {
+    // browsers cannot send opcode=0x9 (ping) manually
+    // but we can simulate a ping request for your server
+    ws.send("__client_ping__");
+    log("[sent] __client_ping__");
+};
+
+document.getElementById("close").onclick = () => {
+    ws.close(1000, "client closed");
+};
+</script>
+
+</body>
+</html>

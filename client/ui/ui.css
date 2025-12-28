@@ -1,0 +1,64 @@
+/* Root container: covers the screen but doesn't block mouse events */
+#ui-root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    font-family: "Segoe UI", sans-serif;
+    color: #eee;
+    z-index: 100;
+}
+
+/* Base panel style */
+.ui-panel {
+    position: absolute;
+    min-width: 600px;
+    max-width: 600px;
+    padding: 12px 16px;
+    border-radius: 10px;
+
+    /* Elegant glassy 3D effect */
+    background: rgba(20, 20, 25, 0.75);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 2px 4px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    animation: uiFadeIn 0.25s ease-out forwards;
+    z-index: 101;
+}
+
+/* Fade-in animation */
+@keyframes uiFadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Panel positions */
+#ui-top-left { top: 12px; left: 12px; }
+#ui-top-right { top: 12px; right: 12px; }
+#ui-bottom-left { bottom: 12px; left: 12px; }
+#ui-bottom-right { bottom: 12px; right: 12px; }
+
+/* Panel titles */
+.ui-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    opacity: 0.9;
+    letter-spacing: 0.5px;
+}
+
+/* Panel content */
+.ui-content {
+    font-size: 13px;
+    line-height: 1.4;
+}
