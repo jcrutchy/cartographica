@@ -1,6 +1,7 @@
 import { showHUD } from "./hud.js";
 import { showModMenu } from "./modmenu.js";
-
+import { UIState } from "./state.js";
+import { setUIState } from "./state.js";
 
 
 export function showMainMenu() {
@@ -8,25 +9,20 @@ export function showMainMenu() {
 
     root.innerHTML = `
         <div class="menu-panel">
-            <div class="menu-title">Main Menu</div>
-            <button class="menu-button" id="btn-new">New Game</button>
-            <button class="menu-button" id="btn-load">Load Game</button>
-            <button class="menu-button" id="btn-options">Options</button>
-            <button class="menu-button" id="btn-mods">Mods & Themes</button>
+            <div class="menu-title">Cartographica</div>
+
+            <button class="menu-button" id="btn-play">Play</button>
+            <button class="menu-button" id="btn-profile">Edit Profile</button>
             <button class="menu-button" id="btn-logout">Logout</button>
         </div>
     `;
 
-    document.getElementById("btn-new").onclick = () => setUIState(UIState.GAME);
-    document.getElementById("btn-load").onclick = () => loadSavedGame();
-    document.getElementById("btn-options").onclick = () => showOptions();
-    document.getElementById("btn-mods").onclick = () => showMods();
-    document.getElementById("btn-logout").onclick = () => {
-        document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.getElementById("btn-profile").onclick = () => {
+        setUIState(UIState.PROFILE);
+    };
+
+    document.getElementById("btn-logout").onclick = async () => {
+        await API.logout();
         setUIState(UIState.LOGIN);
     };
 }
-
-
-
-

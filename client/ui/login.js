@@ -1,69 +1,62 @@
-import { showMainMenu } from "./mainmenu.js";
+import { showEmailSentUI } from "./login_mail_sent.js";
+import { API } from "./auth.js";
 
 
-export function showLoginModal() {
+export function showLoginUI() {
     const root = document.getElementById("menu-root");
 
     root.innerHTML = `
         <div class="menu-panel">
-
             <div class="menu-title">Login</div>
 
-            <input id="login-user" class="menu-input" placeholder="Username">
-            <input id="login-email" class="menu-input" placeholder="Email">
+            <input id="username" class="menu-input" placeholder="Username">
+            <input id="email" class="menu-input" placeholder="Email">
 
             <label class="menu-checkbox">
-                <input type="checkbox" id="login-remember" checked>
-                Remember me on this device
+                <input type="checkbox" id="remember" checked>
+                Remember me
             </label>
 
-            <button class="menu-button" id="btn-send-link">Send Login Link</button>
+            <button class="menu-button" id="btn-login">Send Link</button>
         </div>
     `;
 
-    document.getElementById("btn-send-link").onclick = async () => {
-        const username = document.getElementById("login-user").value.trim();
-        const email = document.getElementById("login-email").value.trim();
-        const remember = document.getElementById("login-remember").checked;
+    document.getElementById("btn-login").onclick = async () => {
+        const username = document.getElementById("username").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const remember = document.getElementById("remember").checked;
 
-        const ok = await requestMagicLink(username, email, remember);
-        if (ok) showLinkSentModal(email);
+        const ok = await API.sendLoginLink(username, email, remember);
+        if (ok) showEmailSentUI(email);
     };
 }
 
 
 
-const API_BASE = "http://localhost:8000";
-
-async function requestMagicLink(username, email, remember) {
-    const res = await fetch(`${API_BASE}/api/send-login-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, remember })
-    });
-    return res.ok;
-}
 
 
 
 
 
 
-export function showLinkSentModal(email) {
-    const root = document.getElementById("menu-root");
 
-    root.innerHTML = `
-        <div class="menu-panel">
-            <div class="menu-title">Check Your Email</div>
-            <div class="menu-text">
-                A login link has been sent to <b>${email}</b>.<br>
-                It expires in 10 minutes.
-            </div>
-            <button class="menu-button" id="btn-close">Close</button>
-        </div>
-    `;
 
-    document.getElementById("btn-close").onclick = () => {
-        root.innerHTML = "";
-    };
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
