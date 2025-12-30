@@ -1,43 +1,38 @@
 //import { initWorld } from "./world/world.js";
 //import { dummyInit } from "./dummy/dummyServer.js";
 
-import { API } from "./ui/auth.js";
-import { UIState } from "./ui/state.js";
-import { setUIState } from "./ui/state.js";
-
-
-let uiState = UIState.LOGIN;
-
-
+import { Identity } from "./ui/identity.js";
+import { NodeConnection } from "./net/websocket.js";
+import { UIState, setUIState } from "./ui/state.js";
 
 window.addEventListener("load", async () => {
-    const me = await API.me();
-
-    if (me.authenticated) {
-        setUIState(UIState.MAIN);
-    } else {
-        setUIState(UIState.LOGIN);
+    // 1. Check for ?token=... in URL (login link)
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("token")) {
+        try {
+            await Identity.redeemLoginToken(params.get("token"));
+            window.location.href="/cartographica/client";
+            return;
+        } catch (err) {
+            console.error(err);
+            setUIState(UIState.LOGIN);
+            return;
+        }
     }
 
+    // 2. Check if already authenticated
+    if (Identity.isAuthenticated()) {
+        setUIState(UIState.MAIN);
+        return;
+    }
+
+    // 3. Otherwise show login UI
+    setUIState(UIState.LOGIN);
 });
 
-
-window.addEventListener("load", async () => {
-    try {
-        const me = await API.me();
-        if (me.authenticated) {
-            setUIState(UIState.MAIN);
-        } else {
-            setUIState(UIState.LOGIN);
-        }
-    } catch (err) {
-        // Don't show an error box for this one
-        setUIState(UIState.LOGIN);
-    }
     //dummyInit(); // simulate server tick loop
     //initWorld(); // create canvas + renderer
     //showLoginUI(); // start at login screen
-});
 
 
 
@@ -59,7 +54,5 @@ createPlayerPanel(ui);
 /*function hasSessionCookie() {
     return document.cookie.includes("session=");
 }*/
-
-
 
 

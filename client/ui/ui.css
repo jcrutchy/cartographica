@@ -52,7 +52,7 @@
 -------------------------------------------------- */
 
 .menu-panel {
-    width: 420px;
+    width: 600px;
     margin: 0 auto;
     padding: 32px 28px;
 
@@ -115,7 +115,12 @@
     text-decoration: underline;
 }
 
-
+.menu-input-email
+  {
+    width: 250px;
+    margin-left: 10px;
+    margin-bottom: 20px;
+  }
 
 /* --------------------------------------------------
    UI ROOT (HUD PANELS)

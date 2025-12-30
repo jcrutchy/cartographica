@@ -6,12 +6,16 @@ header("Content-Type: application/json");
 // ------------------------------------------------------------
 // Load config + libraries
 // ------------------------------------------------------------
-require __DIR__ . "/config.php";
 require __DIR__ . "/db.php";
 require __DIR__ . "/crypto.php";
 require __DIR__ . "/email.php";
 require __DIR__ . "/util.php";
 require __DIR__ . "/smtp.php";
+require __DIR__ . "/error.php";
+require __DIR__ . "/config.php";
+
+set_error_handler("error_handler",E_ALL);
+set_exception_handler("exception_handler");
 
 $action = $_GET["action"] ?? null;
 if (!$action) {
@@ -129,6 +133,43 @@ switch ($action) {
 
         json_ok(["valid" => true, "player_id" => $payload["player_id"]]);
         break;
+
+
+    case "issue_node_certificate":
+        $publicKey = $_POST["public_key"] ?? "";
+        $node_id   = $_POST["node_id"] ?? "";
+        $network_id = $_POST["network_id"] ?? "";
+        $ws_url    = $_POST["ws_url"] ?? "";
+        $seed      = (int)($_POST["seed"] ?? 0);
+        $connections = json_decode($_POST["connections"] ?? "[]", true);
+    
+        if (!$publicKey || !$node_id || !$network_id || !$ws_url) {
+            json_error("Missing fields");
+        }
+    
+        $now = time();
+    
+        $payload = [
+            "type"        => "node",
+            "node_id"     => $node_id,
+            "network_id"  => $network_id,
+            "public_key"  => $publicKey,
+            "ws_url"      => $ws_url,
+            "seed"        => $seed,
+            "connections" => $connections,
+            "issued_at"   => $now,
+            "expires_at"  => $now + 86400 // 24 hours
+        ];
+    
+        $signature = sign_payload($payload);
+    
+        json_ok([
+            "payload"   => $payload,
+            "signature" => $signature
+        ]);
+
+
+
 
 
     // --------------------------------------------------------

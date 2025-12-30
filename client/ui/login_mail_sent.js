@@ -7,16 +7,14 @@ export function showEmailSentUI(email) {
 
     root.innerHTML = `
         <div class="menu-panel">
-            <div class="menu-title">Check Your Email</div>
+            <div class="menu-title">Check your email</div>
             <div class="menu-text">
-                A login link has been sent to <b>${email}</b>.
-                It expires in 10 minutes.
+                <p>A link has been sent to <b>${email}</b></p>
+                <p>It expires in 10 minutes.</p>
+                <p>You can now safely close this tab.</p>
+                <p>Clicking the link in your email will open Cartographica in a new web browser tab and automatically sign in for you.</p>
             </div>
-            <button class="menu-button" id="btn-close">Close</button>
         </div>
     `;
 
-    document.getElementById("btn-close").onclick = () => {
-        setUIState(UIState.LOGIN);
-    };
 }

@@ -1,32 +1,11 @@
 <?php
 
-namespace cartographica\lib\smtp;
-
-/*
-// Load credentials from your JSON file
-$creds = smtp_load_credentials("../../pwd/cartographica/mail.txt");
-
-// Send an email
-smtp_mail(
-    host: "mail.aussiebroadband.com.au",
-    port: 587,
-    username: $creds['username'],
-    password: $creds['password'],
-    from: "jared.crutchfield@wideband.net.au",
-    to: "jared.crutchfield@wideband.net.au",
-    subject: "Cartographica Event Notification",
-    htmlBody: "<h1>New Event</h1><p>Your world has changed.</p>",
-    replyTo: "jared.crutchfield@wideband.net.au"   // optional
-);
-
-echo "Mail sent.\n";
-*/
-
+namespace cartographica\identity\smtp;
 
 // ------------------------------------------------------------
 // Load SMTP credentials from JSON file
 // ------------------------------------------------------------
-function smtp_load_credentials($relativePath) {
+function load_credentials($relativePath) {
     $credFile = __DIR__ . "/" . $relativePath;
 
     if (!file_exists($credFile)) {
@@ -70,8 +49,18 @@ function smtp_cmd($conn, $cmd, $expect = null) {
 // ------------------------------------------------------------
 function smtp_mail($host, $port, $username, $password, $from, $to, $subject, $htmlBody, $replyTo = null) {
 
-    // Connect
-    $conn = stream_socket_client("$host:$port", $errno, $errstr, 10);
+
+    $context = stream_context_create([
+        'ssl' => [
+            'cafile' => '../../cartographica_data/identity/cacert.pem',
+            'verify_peer' => true,
+            'verify_peer_name' => true
+        ]
+    ]);
+    
+    $conn = stream_socket_client("$host:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
+
+
     if (!$conn) {
         throw new Exception("Connection failed: $errstr ($errno)");
     }

@@ -1,36 +1,38 @@
-export class WSClient {
-    constructor(url) {
-        this.url = url;
+// net/ws.js
+
+const NODE_WS_URL = "ws://localhost:8080";
+
+export class NodeConnection {
+    constructor(identity) {
+        this.identity = identity;
         this.ws = null;
-        this.handlers = {};
     }
 
-    connect() {
-        this.ws = new WebSocket(this.url);
+    connect(onWorld) {
+        this.ws = new WebSocket(NODE_WS_URL);
 
-        this.ws.onopen = () => this.emit("open");
-        this.ws.onclose = e => this.emit("close", e);
-        this.ws.onerror = e => this.emit("error", e);
-        this.ws.onmessage = e => {
-            let data = e.data;
-            try { data = JSON.parse(e.data); } catch {}
-            this.emit("message", data);
+        this.ws.onopen = () => {
+            console.log("Connected to node server");
         };
-    }
 
-    send(type, payload = {}) {
-        const msg = JSON.stringify({ type, ...payload });
-        this.ws.send(msg);
-    }
+        this.ws.onmessage = (ev) => {
+            const msg = JSON.parse(ev.data);
 
-    on(event, fn) {
-        if (!this.handlers[event]) this.handlers[event] = [];
-        this.handlers[event].push(fn);
-    }
+            if (msg.type === "HELLO") {
+                this.ws.send(JSON.stringify({
+                    type: "AUTH",
+                    payload: this.identity.payload,
+                    signature: this.identity.signature
+                }));
+            }
 
-    emit(event, data) {
-        if (this.handlers[event]) {
-            for (const fn of this.handlers[event]) fn(data);
-        }
+            if (msg.type === "AUTH_OK") {
+                this.ws.send(JSON.stringify({ type: "REQUEST_WORLD" }));
+            }
+
+            if (msg.type === "WORLD") {
+                onWorld(msg.tiles, msg.player);
+            }
+        };
     }
 }

@@ -234,6 +234,122 @@ Verify token signature (optional).
 - Check expiry
 - Extract `player_id`
 
+
+# Cartographica Node Server
+
+The Cartographica Node Server is a lightweight, stateful simulation server responsible for:
+
+- Managing authenticated player sessions
+- Serving world data (chunks, terrain, entities)
+- Simulating local gameplay state
+- Communicating with the Node Discovery Service (NDS)
+- Persisting player and world data to SQLite
+
+Each node represents a region of the world grid (e.g., `0,0`) and is responsible for all players and entities within that region.
+
+---
+
+## Features
+
+### ✔ WebSocket Server
+- RFC 6455–compliant handshake and frame parser
+- Ping/pong, close frames, fragmentation support
+- Event‑driven callbacks (`onOpen`, `onMessage`, `onClose`, `onTick`)
+
+### ✔ Authentication
+- Verifies signed identity tokens from the Identity Service
+- Rejects expired or invalid tokens
+- Loads or creates player records
+
+### ✔ Player Management
+- PlayerManager handles:
+  - Loading players from SQLite
+  - Creating new players
+  - Caching active players
+  - Saving on disconnect
+- JSON‑based player data for flexibility
+
+### ✔ Database Layer
+- SQLite database with WAL mode
+- Schema auto‑initialization from `schema.sql`
+- Shared DB connection via `DB` singleton
+
+### ✔ Node Discovery Integration
+- Registers with NDS on startup
+- Announces node coordinates and availability
+
+---
+
+## Directory Structure
+
+```
+node/
+  server.php
+  config.php
+  schema.sql
+  lib/
+    DB.php
+    PlayerManager.php
+    WebSocketServer.php
+  README.md
+  protocol.md
+```
+
+---
+
+## Running the Node Server
+
+```
+php server.php
+```
+
+You should see:
+
+```
+[INFO] Node server database initialized.
+[INFO] Cartographica Node Server starting…
+[INFO] Listening on ws://localhost:8080
+[INFO] Node registered with NDS.
+```
+
+---
+
+## Configuration
+
+`config.php` defines:
+
+```php
+define('DB_PATH', __DIR__ . '/data/node.db');
+define('NODE_ID', '0,0');
+define('NDS_URL', 'http://localhost:9000');
+```
+
+---
+
+## Database Schema
+
+The schema is defined in `schema.sql` and automatically applied on startup.
+
+---
+
+## Protocol
+
+See [`protocol.md`](protocol.md) for a full description of the WebSocket protocol used by Cartographica nodes.
+
+---
+
+## Roadmap
+
+- WorldManager (chunks, terrain, entities)
+- Player movement + interpolation
+- Entity simulation
+- Inventory system
+- Combat + interactions
+- Node‑to‑node handoff
+```
+
+
+
 ---
 
 ## 🧭 Future Plans / Roadmap

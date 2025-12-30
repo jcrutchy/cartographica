@@ -1,4 +1,5 @@
 <?php
+
 function db() {
     static $pdo = null;
     if ($pdo === null) {
@@ -8,6 +9,7 @@ function db() {
     init_db($pdo);
     return $pdo;
 }
+
 
 function init_db(PDO $pdo): void
 {
