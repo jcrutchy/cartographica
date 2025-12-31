@@ -44,6 +44,17 @@ class RequestLogin
         $mailer = new Mailer();
         $mailer->sendLoginLink($email, $link);
 
+        $pdo = Db::conn();
+        $stmt = $pdo->prepare("
+            INSERT INTO login_attempts (email, requested_at, ip_address)
+            VALUES (:email, :time, :ip)
+        ");
+        $stmt->execute([
+            ":email" => $email,
+            ":time"  => time(),
+            ":ip"    => $this->req->ip()
+        ]);
+
         Logger::info("Login link sent to $email");
 
         Response::success(["status" => "sent"]);

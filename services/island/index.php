@@ -7,12 +7,12 @@ use cartographica\share\Request;
 use cartographica\share\Router;
 use cartographica\share\Logger;
 use cartographica\share\Keys;
-use cartographica\services\identity\Config;
+use cartographica\services\island\Config;
 
 // Init logging
 Logger::init(Config::logFile());
 
-// Ensure identity keypair exists
+// Ensure keypair exists
 Keys::ensure(Config::privateKey(), Config::publicKey());
 
 // Build request + router

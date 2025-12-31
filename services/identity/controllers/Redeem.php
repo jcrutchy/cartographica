@@ -7,49 +7,74 @@ use cartographica\share\Response;
 use cartographica\share\Crypto;
 use cartographica\services\identity\Config;
 
-class Redeem {
+class Redeem
+{
     private Request $req;
 
-    public function __construct(Request $req) {
+    public function __construct(Request $req)
+    {
         $this->req = $req;
     }
 
-    public function handle(): void {
-        $token = $this->req->post("token");
+    public function handle(): void
+    {
+        //
+        // 1. Get token from POST
+        //
+        $tokenJson = $this->req->post("token");
 
-        if (!$token) {
-            Response::error("Missing token");
+        if (!$tokenJson) {
+            Response::error("Missing token from emailed link.");
         }
 
-        $publicKey = file_get_contents(Config::publicKey());
+        //
+        // 2. Decode token JSON
+        //
+        $token = json_decode($tokenJson, true);
 
-        $payload = json_decode(base64_decode($token), true);
-
-        if (!is_array($payload)) {
-            Response::error("Invalid token");
+        if (!is_array($token)) {
+            Response::error("Invalid token from emailed link [1].");
         }
 
-        if (!Crypto::verify($payload, $token, $publicKey)) {
-            Response::error("Invalid signature");
+        if (!isset($token["payload"]) || !isset($token["signature"])) {
+            Response::error("Invalid token from emailed link.");
         }
 
-        if ($payload["expires_at"] < time()) {
-            Response::error("Token expired");
+        $payload   = $token["payload"];
+        $signature = $token["signature"];
+
+        if (!is_array($payload) || !is_string($signature)) {
+            Response::error("Invalid token from emailed link [2].");
         }
 
-        // Issue device token
-        $devicePayload = [
-            "email"      => $payload["email"],
-            "issued_at"  => time(),
-            "expires_at" => time() + 86400 * 30
-        ];
+        //
+        // 3. Load public key
+        //
+        $publicKey = @file_get_contents(Config::publicKey());
+        if (!$publicKey) {
+            Response::error("Identity public key not available.");
+        }
 
-        $privateKey = file_get_contents(Config::privateKey());
-        $deviceToken = Crypto::sign($devicePayload, $privateKey);
+        //
+        // 4. Verify signature
+        //
+        $ok = Crypto::verify($payload, $signature, $publicKey);
 
-        Response::success([
-            "device_token" => $deviceToken,
-            "payload"      => $devicePayload
+        if (!$ok) {
+            Response::error("Invalid token from emailed link [3].");
+        }
+
+        //
+        // 5. Generate device token
+        //
+        $deviceToken = Crypto::randomId(32);
+
+        //
+        // 6. Return success
+        //
+        Response::json([
+            "ok"           => true,
+            "device_token" => $deviceToken
         ]);
     }
 }

@@ -21,8 +21,8 @@ namespace cartographica\share;
 
 class Crypto {
     public static function sign(array $payload, string $privateKey): string {
-        $json = json_encode($payload);
-        openssl_sign($json, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+        $json=json_encode($payload);
+        openssl_sign($json,$signature,$privateKey,OPENSSL_ALGO_SHA256);
         return base64_encode($signature);
     }
 

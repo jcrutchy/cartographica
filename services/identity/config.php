@@ -6,7 +6,7 @@ use cartographica\share\SharedConfig;
 
 class Config
 {
-    private const BASE = CARTOGRAPHICA_DATA_DIR . "/services/identity";
+    private const BASE = \CARTOGRAPHICA_DATA_DIR . "/services/identity";
 
     public static function privateKey(): string {
         return self::BASE . "/identity_private.pem";
@@ -43,4 +43,5 @@ class Config
     public static function adminEmail(): string {
         return SharedConfig::get("admin_email");
     }
+
 }

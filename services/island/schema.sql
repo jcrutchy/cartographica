@@ -1,0 +1,5 @@
+CREATE TABLE players (
+    player_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    joined_at INTEGER NOT NULL
+);
