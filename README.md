@@ -1,7 +1,3 @@
-Here it is — your **developer‑friendly, comprehensive, welcoming, and practical `README.md`** for the Archipelago Protocol project.  
-This pairs perfectly with the `protocol.md` you now have.
-
-You can drop this straight into the root of your repo.
 
 ---
 
