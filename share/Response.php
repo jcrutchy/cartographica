@@ -1,0 +1,40 @@
+<?php
+
+/*
+
+Response.php
+============
+
+Purpose:
+Every service returns JSON.
+You want consistent formatting and error handling.
+
+Features:
+- Automatic headers
+- Automatic encoding
+
+Responsibilities:
+Response::json($data, $status = 200)
+Response::error($message, $status = 400)
+Response::success($data)
+
+*/
+
+namespace cartographica\share;
+
+class Response {
+    public static function json(array $data, int $status = 200): void {
+        http_response_code($status);
+        header("Content-Type: application/json");
+        echo json_encode($data);
+        exit;
+    }
+
+    public static function error(string $msg, int $status = 400): void {
+        self::json(["error" => $msg], $status);
+    }
+
+    public static function success(array $data): void {
+        self::json($data, 200);
+    }
+}

@@ -1,390 +1,303 @@
-# 📘 **Cartographica — Project README**
+Here it is — your **developer‑friendly, comprehensive, welcoming, and practical `README.md`** for the Archipelago Protocol project.  
+This pairs perfectly with the `protocol.md` you now have.
 
-## 🌍 Overview
-
-Cartographica is a web-based civilization/resource simulation game.
-
-It has been developed with the assistance of AI tools including Copilot and Gemini.
-
-Cartographica is an experimental, decentralized, node‑based game world built around a simple idea:
-
-> **The world is infinite, the nodes are autonomous, and the protocol is the game.**
-
-Instead of a monolithic game engine, Cartographica defines a **protocol** that clients and servers can implement in any language. The world is composed of **tilemap nodes**, each handled by its own server process. Nodes form an infinite graph, connected by coordinate offsets. Players move between nodes seamlessly, carrying their identity and state with them.
-
-This repository contains the early foundations of the project, including:
-
-- The **Identity Service** (a small certificate‑authority‑like service)
-- Early protocol ideas
-- Node server concepts
-- Authentication and world‑state design
+You can drop this straight into the root of your repo.
 
 ---
 
-## 🧠 Project Vision
+# 🌍 **Cartographica — The Archipelago Protocol**  
+### *A friendly guide to setting up and developing the Cartographica distributed world services*
 
-Cartographica aims to be:
+Welcome to Cartographica!  
+This project implements **The Archipelago Protocol**, a lightweight, game‑friendly system for connecting players, islands (servers), and trust authorities into a shared world.
 
-- **Decentralized** — any node server can be written in any language and hosted anywhere.
-- **Federated** — multiple operators can run their own worlds or connect into shared ones.
-- **Procedural** — each node generates its tilemap from a seed.
-- **Persistent** — players have a stable identity across nodes and devices.
-- **Protocol‑driven** — the “game” is defined by messages, not by a specific engine.
+This README will help you:
 
-Think of it as a cross between:
+- understand the project structure  
+- set up your development environment  
+- configure the external data directory  
+- run each service  
+- explore the tools and shared framework  
+- run tests  
+- extend the system  
 
-- IRC (federated servers)
-- Minecraft (persistent identity + world)
-- MUDs (text‑first protocol)
-- A distributed graph database (world topology)
-
----
-
-## 🏛️ Architecture Summary
-
-Cartographica consists of three conceptual layers:
-
-### 1. **Identity Layer (Centralized CA‑like service)**
-- Issues long‑lived device tokens
-- Verifies email login links
-- Signs identity payloads using OpenSSL
-- Provides a stable `player_id` for each user
-- Does **not** store world state
-
-### 2. **World Layer (Decentralized node servers)**
-- Each node is a tilemap server
-- Nodes generate terrain from a seed
-- Nodes store local world state keyed by `player_id`
-- Nodes verify identity tokens using the CA’s public key
-- Nodes do **not** need to talk to each other directly
-
-### 3. **Client Layer**
-- Connects to node servers via WebSocket
-- Sends `AUTH` with signed token
-- Renders tilemaps, entities, and movement
-- Can be implemented in any language
+This is a developer‑friendly document — no corporate jargon, no over‑formal RFC language. Just clear explanations and practical steps.
 
 ---
 
-## 🔐 Identity Service Overview
+# 🗺️ 1. Project Overview
 
-The Identity Service acts like a **mini certificate authority**:
+Cartographica is built around the idea of a world composed of many **islands** — independent servers that players can visit. These islands form an **archipelago**, connected through a simple, secure protocol.
 
-- Users authenticate via **email magic links**
-- The service issues **long‑lived device tokens**
-- Tokens contain:
-  - `player_id` (permanent identity)
-  - `issued_at`
-  - `expires_at`
-- Tokens are **signed** with the CA’s private key
-- Node servers verify tokens using the **public key**
+The system consists of three main services:
 
-This allows:
+- **Identity Service**  
+  Authenticates humans via email login links. Issues device tokens.
 
-- Portable identity across devices
-- Portable identity across nodes
-- No passwords
-- No central login during gameplay
-- No need for node servers to store email or secrets
+- **Island Directory**  
+  Acts as a certificate authority (CA). Issues island certificates.
+
+- **Island Server**  
+  Hosts a game world “island”. Uses certificates to prove identity.
+
+All services share a common internal framework located in `share/`.
 
 ---
 
-## 🧩 Node Server Overview
+# 🧱 2. Repository Structure
 
-Each node server:
+```
+cartographica/
+├── README.md
+├── protocol.md
+├── share/
+│   ├── Autoload.php
+│   ├── Env.php
+│   ├── Logger.php
+│   ├── Request.php
+│   ├── Response.php
+│   ├── Router.php
+│   ├── Crypto.php
+│   ├── Keys.php
+│   ├── Smtp.php
+│   ├── Template.php
+│   └── SharedConfig.php
+├── services/
+│   ├── identity/
+│   ├── island/
+│   └── island-directory/
+├── tools/
+└── tests/
+```
 
-- Accepts WebSocket connections
-- Receives `AUTH { token, payload, signature }`
-- Verifies the signature using the CA’s public key
-- Extracts `player_id`
-- Loads or creates local world state for that player
-- Generates tilemaps from a deterministic seed
-- Handles movement, entities, and node‑local simulation
+Runtime data lives **outside** the repo:
 
-Nodes are **independent**:
+```
+cartographica_data/
+└── services/
+    ├── identity/
+    ├── island/
+    └── island-directory/
+```
 
-- They don’t share databases
-- They don’t coordinate identity
-- They don’t need to know about other nodes except via edge definitions
+This keeps secrets, logs, and databases out of version control.
 
 ---
 
-## 📡 Protocol Philosophy
+# 📦 3. External Data Directory
 
-Cartographica’s protocol is:
+Create this next to the repo:
 
-- **Message‑based**
-- **Language‑agnostic**
-- **Human‑readable (JSON)**
-- **Extensible**
+```
+cartographica/
+cartographica_data/
+```
 
-Core message types include:
+Inside:
 
-- `HELLO`
-- `AUTH`
-- `WORLD_STATE`
-- `ENTITY_UPDATE`
-- `MOVE`
-- `TRANSFER` (node boundary crossing)
+```
+cartographica_data/
+  shared/
+    config.json
+  services/
+    identity/
+      identity_private.pem
+      identity_public.pem
+      identity.sqlite
+      smtp_credentials.txt
+      log/
+    island/
+      island_private.pem
+      island_public.pem
+      island.sqlite
+      island_config.json
+      log/
+    island-directory/
+      island-directory.sqlite
+      log/
+```
 
-The protocol is intentionally simple so that:
-
-- Clients can be written in any language
-- Node servers can be implemented independently
-- The world can grow organically
+The game never stores secrets inside the repo — only here.
 
 ---
 
-## 📁 Folder Structure
+# ⚙️ 4. Shared Configuration (`config.json`)
+
+Located at:
 
 ```
-repo/
-│
-├── identity/
-│   ├── index.php
-│   ├── config.php
-│   ├── db.sqlite
-│   ├── schema.sql
-│   ├── keys/
-│   │   ├── ca_private.pem
-│   │   └── ca_public.pem
-│   └── lib/
-│       ├── db.php
-│       ├── crypto.php
-│       ├── email.php
-│       └── util.php
-│
-└── (future)
-    ├── node-server/
-    ├── client/
-    └── protocol/
+cartographica_data/shared/config.json
 ```
 
----
+Example:
 
-## ⚙️ Setup Instructions
-
-### 1. Install dependencies
-- PHP 8+
-- SQLite
-- OpenSSL
-- Apache or Nginx
-
-### 2. Generate CA keys
-```
-openssl genpkey -algorithm RSA -out ca_private.pem -pkeyopt rsa_keygen_bits:4096
-openssl rsa -in ca_private.pem -pubout -out ca_public.pem
-```
-
-Place them in:
-
-```
-identity/keys/
-```
-
-### 3. Initialize SQLite database
-```
-sqlite3 db.sqlite < schema.sql
-```
-
-### 4. Configure email sending
-Edit `identity/config.php`:
-
-```php
-define("EMAIL_FROM", "no-reply@example.com");
-```
-
----
-
-## 🚀 Running the Identity Service
-
-Point your web server to the `identity/` folder.
-
-Endpoints:
-
-### `POST /identity/index.php?action=request_login`
-Request a login link.
-
-### `GET /identity/index.php?action=redeem&token=...`
-Redeem login link → returns device token.
-
-### `POST /identity/index.php?action=verify`
-Verify token signature (optional).
-
----
-
-## 🔏 Token Format & Cryptography
-
-### Payload example:
 ```json
 {
-  "player_id": "a1f3c9d0e2...",
-  "issued_at": 1735689600,
-  "expires_at": 1798857600
+  "environment": "development",
+
+  "web_root": "http://localhost/cartographica",
+
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_from_email": "no-reply@cartographica.com",
+
+  "admin_email": "admin@cartographica.com",
+
+  "identity_url": "http://localhost/cartographica/services/identity",
+  "island_directory_url": "http://localhost/cartographica/services/island-directory"
 }
 ```
 
-### Signature:
-- Base64‑encoded OpenSSL signature
-- Signed with CA private key
-- Verified with CA public key
-
-### Node server verification:
-- Check signature
-- Check expiry
-- Extract `player_id`
-
-
-# Cartographica Node Server
-
-The Cartographica Node Server is a lightweight, stateful simulation server responsible for:
-
-- Managing authenticated player sessions
-- Serving world data (chunks, terrain, entities)
-- Simulating local gameplay state
-- Communicating with the Node Discovery Service (NDS)
-- Persisting player and world data to SQLite
-
-Each node represents a region of the world grid (e.g., `0,0`) and is responsible for all players and entities within that region.
+This file controls environment‑specific settings.
 
 ---
 
-## Features
+# 🚀 5. Running the Services
 
-### ✔ WebSocket Server
-- RFC 6455–compliant handshake and frame parser
-- Ping/pong, close frames, fragmentation support
-- Event‑driven callbacks (`onOpen`, `onMessage`, `onClose`, `onTick`)
+Each service is self‑contained and can be run using PHP’s built‑in server.
 
-### ✔ Authentication
-- Verifies signed identity tokens from the Identity Service
-- Rejects expired or invalid tokens
-- Loads or creates player records
-
-### ✔ Player Management
-- PlayerManager handles:
-  - Loading players from SQLite
-  - Creating new players
-  - Caching active players
-  - Saving on disconnect
-- JSON‑based player data for flexibility
-
-### ✔ Database Layer
-- SQLite database with WAL mode
-- Schema auto‑initialization from `schema.sql`
-- Shared DB connection via `DB` singleton
-
-### ✔ Node Discovery Integration
-- Registers with NDS on startup
-- Announces node coordinates and availability
-
----
-
-## Directory Structure
+### Identity Service
 
 ```
-node/
-  server.php
-  config.php
-  schema.sql
-  lib/
-    DB.php
-    PlayerManager.php
-    WebSocketServer.php
-  README.md
-  protocol.md
+php -S localhost:8001 -t services/identity
+```
+
+### Island Directory
+
+```
+php -S localhost:8002 -t services/island-directory
+```
+
+### Island Server
+
+```
+php -S localhost:8003 -t services/island
+```
+
+You can also run them behind Apache/Nginx if you prefer.
+
+---
+
+# 📨 6. Email Sending
+
+The identity service uses:
+
+- `share/Smtp.php` for low‑level SMTP  
+- `services/identity/Mailer.php` for identity‑specific templates  
+- `share/Template.php` for HTML templates  
+
+Email templates live in:
+
+```
+services/identity/templates/
 ```
 
 ---
 
-## Running the Node Server
+# 🔐 7. Keys and Certificates
+
+Each service has its own keypair stored in:
 
 ```
-php server.php
+cartographica_data/services/<service>/identity_private.pem
+cartographica_data/services/<service>/identity_public.pem
 ```
 
-You should see:
-
-```
-[INFO] Node server database initialized.
-[INFO] Cartographica Node Server starting…
-[INFO] Listening on ws://localhost:8080
-[INFO] Node registered with NDS.
-```
+The `share/Keys.php` helper ensures keys exist and generates them if missing.
 
 ---
 
-## Configuration
+# 🧪 8. Tests
 
-`config.php` defines:
+Tests live in:
+
+```
+tests/
+```
+
+You can run them with:
+
+```
+phpunit
+```
+
+(Or any test runner you prefer.)
+
+Tests can override the data directory by defining:
 
 ```php
-define('DB_PATH', __DIR__ . '/data/node.db');
-define('NODE_ID', '0,0');
-define('NDS_URL', 'http://localhost:9000');
+define("CARTOGRAPHICA_DATA_DIR", "/tmp/cartotest_123");
 ```
 
 ---
 
-## Database Schema
+# 🧩 9. Tools
 
-The schema is defined in `schema.sql` and automatically applied on startup.
+The `tools/` directory contains:
+
+- admin utilities  
+- client utilities  
+- debugging helpers  
+
+These are optional but useful during development.
 
 ---
 
-## Protocol
+# 🧠 10. The Archipelago Protocol
 
-See [`protocol.md`](protocol.md) for a full description of the WebSocket protocol used by Cartographica nodes.
+The full protocol specification lives in:
 
----
-
-## Roadmap
-
-- WorldManager (chunks, terrain, entities)
-- Player movement + interpolation
-- Entity simulation
-- Inventory system
-- Combat + interactions
-- Node‑to‑node handoff
+```
+protocol.md
 ```
 
+It includes:
 
+- architecture diagrams  
+- sequence diagrams  
+- JSON examples  
+- glossary  
+- version notes  
 
----
-
-## 🧭 Future Plans / Roadmap
-
-- Node server prototype (PHP, Swoole, or Go)
-- WebSocket protocol spec
-- Tilemap generation module
-- Node graph topology service
-- QR‑based login flow
-- Federation support (multiple identity realms)
-- Client SDKs (JS, C#, Rust)
+If you’re building a client or island server, start there.
 
 ---
 
-## 🤝 Contribution Guidelines
+# 🛠️ 11. Extending the System
 
-- Keep the protocol simple and language‑agnostic
-- Avoid engine‑specific assumptions
-- Document message formats clearly
-- Keep identity service stable and backward‑compatible
-- Prefer deterministic systems over random ones
+You can add:
 
----
+- new services  
+- new actions  
+- new templates  
+- new certificate types  
+- new island features  
 
-## 📄 License
-
-*(Add your chosen license here — MIT, Apache 2.0, GPL, etc.)*
+The `share/` framework is intentionally lightweight and easy to extend.
 
 ---
 
-If you want, I can also generate:
+# 🧭 12. Contributing
 
-- A **diagram** of the architecture  
-- A **protocol.md** spec  
-- A **node server skeleton**  
-- A **client authentication example**  
+If you’re working on this project:
 
-Just tell me what you want to build next.
+- keep secrets out of the repo  
+- follow the directory structure  
+- use the shared framework  
+- update `protocol.md` when adding new flows  
+- keep controllers small and focused  
+
+---
+
+# 🎉 13. Final Notes
+
+Cartographica is meant to be fun — both to play and to develop.  
+The Archipelago Protocol is intentionally simple, friendly, and game‑oriented.
+
+If you ever find yourself thinking:
+
+> “This feels too serious for a game.”
+
+…then it’s probably time to simplify.
+
+---

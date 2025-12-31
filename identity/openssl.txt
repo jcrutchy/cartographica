@@ -1,5 +1,0 @@
-openssl genpkey -algorithm RSA -out ca_private.pem -pkeyopt rsa_keygen_bits:4096
-openssl rsa -in ca_private.pem -pubout -out ca_public.pem
-
-ca_private.pem → never commit this to git
-ca_public.pem → safe to commit, node servers need it

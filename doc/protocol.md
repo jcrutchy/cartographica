@@ -1,211 +1,379 @@
-# Cartographica Node Protocol
-
-This document defines the WebSocket protocol used between the game client and a Cartographica Node Server.
-
-The protocol is JSON‑based, message‑oriented, and stateful.
 
 ---
 
-# 1. Connection Lifecycle
-
-## 1.1 WebSocket Handshake
-
-Clients connect to:
-
-```
-ws://<node-host>:8080
-```
-
-Upon successful handshake, the server sends:
-
-```json
-{
-  "type": "HELLO",
-  "node": "0,0"
-}
-```
-
-The client must then authenticate.
+# 🌊 **The Archipelago Protocol**  
+### *A developer‑friendly specification for Cartographica’s distributed world services*
 
 ---
 
-# 2. Authentication
+# 1. Introduction
 
-## 2.1 AUTH Message
+The **Archipelago Protocol** defines how Cartographica’s distributed services communicate, authenticate, and exchange trust. It is designed for a game world composed of many independent “islands” (servers), all connected through a lightweight, secure, and human‑friendly network.
 
-Sent by the client immediately after receiving `HELLO`.
+This document describes:
+
+- the architecture  
+- the trust model  
+- the JSON message format  
+- the identity login flow  
+- the island registration and certificate flow  
+- the island handshake  
+- security considerations  
+- version notes  
+- glossary  
+
+The tone is intentionally friendly — this is a game, not a spacecraft navigation bus protocol.
+
+---
+
+# 2. High‑Level Architecture
+
+```
+                           +---------------------------+
+                           |     Island Directory      |
+                           |  (Trust Authority / CA)   |
+                           +-------------+-------------+
+                                         ^
+                                         |
+                                         |
++------------------+                     |                     +------------------+
+|   Identity       |                     |                     |     Island       |
+|   Service        |                     |                     |     Server       |
+| (Human Auth)     |                     |                     | (Game Instance)  |
++---------+--------+                     |                     +---------+--------+
+          ^                              |                               ^
+          |                              |                               |
+          |                              |                               |
+          |                              |                               |
+          |                              |                               |
++---------+--------+                     |                     +---------+--------+
+|     Client       |---------------------+---------------------|     Client       |
+| (Human Player)   |   Archipelago Protocol (JSON over HTTP)   | (Game Client)    |
++------------------+                                           +------------------+
+```
+
+### Components
+
+| Component | Purpose |
+|----------|---------|
+| **Identity Service** | Authenticates humans via email login links. Issues device tokens. |
+| **Island Directory** | Acts as a certificate authority (CA). Issues island certificates. |
+| **Island Server** | Hosts a game world “island”. Uses certificates to prove identity. |
+| **Client** | The human player’s game client. |
+
+---
+
+# 3. Directory Structure
+
+The protocol assumes the following layout:
+
+```
+cartographica/
+  share/
+  services/
+  tools/
+  tests/
+
+cartographica_data/
+  shared/
+    config.json
+  services/
+    identity/
+    island/
+    island-directory/
+```
+
+All secrets, logs, databases, and keys live in `cartographica_data/`.
+
+---
+
+# 4. Trust Model
+
+The Archipelago Protocol uses a simple PKI‑style trust chain:
+
+```
+Human → Identity Service → Device Token
+Island → Island Directory → Island Certificate
+```
+
+### Human Authentication
+- Humans authenticate via **email login links**.
+- The identity service signs a **device token** with its private key.
+- Clients present device tokens to islands.
+
+### Island Authentication
+- Islands register with the **Island Directory**.
+- The directory signs an **island certificate**.
+- Islands present certificates to clients and other islands.
+
+### Trust Anchors
+- Identity public key  
+- Island Directory public key  
+
+These are distributed with the game client.
+
+---
+
+# 5. JSON Message Format
+
+All messages follow this structure:
 
 ```json
 {
-  "type": "AUTH",
-  "payload": {
-    "player_id": "<hex string>",
-    "issued_at": 1767074014,
-    "expires_at": 1782626014
-  },
-  "signature": "<base64 signature>"
+  "action": "string",
+  "data": { ... }
 }
 ```
 
-### Rules
-
-- `player_id` is a 64‑character hex string.
-- `payload` is signed using the Identity Service private key.
-- The node verifies the signature using the public key.
-- Tokens must not be expired.
-
-## 2.2 AUTH_OK
-
-Returned on success:
+Responses:
 
 ```json
 {
-  "type": "AUTH_OK",
-  "player": {
-    "player_id": "...",
-    "created_at": 1767083727,
-    "last_seen": 1767083727,
-    "position": [0, 0],
-    "inventory": [],
-    "stats": {
-      "health": 100,
-      "mana": 50
+  "ok": true,
+  "data": { ... }
+}
+```
+
+Errors:
+
+```json
+{
+  "ok": false,
+  "error": "Message describing the error"
+}
+```
+
+---
+
+# 6. Identity Service
+
+## 6.1 Login Flow Overview
+
+```
++--------+        +------------------+        +------------------+
+| Client |        | Identity Service |        | Email Provider   |
++---+----+        +---------+--------+        +---------+--------+
+    |                       |                           |
+    | POST request_login    |                           |
+    |---------------------->|                           |
+    |                       | Generate token            |
+    |                       | Send email via SMTP       |
+    |                       |-------------------------->|
+    |                       |                           |
+    |                       | <--- Email delivered ---- |
+    |                       |                           |
+    | User clicks link      |                           |
+    |---------------------->| POST redeem               |
+    |                       | Validate + issue device   |
+    |                       | token                     |
+    |                       |                           |
+    | <------ device token -+                           |
+```
+
+---
+
+## 6.2 `request_login`
+
+### Request
+
+```json
+{
+  "action": "request_login",
+  "data": {
+    "email": "player@example.com"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "status": "sent"
+  }
+}
+```
+
+---
+
+## 6.3 `redeem`
+
+### Request
+
+```json
+{
+  "action": "redeem",
+  "data": {
+    "token": "<signed login token>"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "device_token": "<signed device token>",
+    "payload": {
+      "email": "player@example.com",
+      "issued_at": 1700000000,
+      "expires_at": 1702592000
     }
   }
 }
 ```
 
-## 2.3 AUTH_ERROR
-
-Returned on failure:
-
-```json
-{
-  "type": "ERROR",
-  "msg": "Invalid signature"
-}
-```
-
 ---
 
-# 3. World Loading
+## 6.4 `verify`
 
-## 3.1 REQUEST_WORLD
+Used by islands to verify device tokens.
 
-Sent by the client after authentication:
-
-```json
-{
-  "type": "REQUEST_WORLD"
-}
-```
-
-## 3.2 WORLD_DATA
-
-Returned by the server:
+### Request
 
 ```json
 {
-  "type": "WORLD_DATA",
-  "world": {
-    "seed": 12345,
-    "chunks": [
-      { "x": 0, "y": 0, "terrain": "grass" },
-      { "x": 1, "y": 0, "terrain": "forest" }
-    ]
+  "action": "verify",
+  "data": {
+    "device_token": "<signed device token>"
   }
 }
 ```
 
-This is a placeholder until the full WorldManager is implemented.
-
----
-
-# 4. Player Movement (Future)
-
-## 4.1 MOVE
+### Response
 
 ```json
 {
-  "type": "MOVE",
-  "dx": 1,
-  "dy": 0
-}
-```
-
-## 4.2 PLAYER_MOVED
-
-Broadcast to nearby players:
-
-```json
-{
-  "type": "PLAYER_MOVED",
-  "player_id": "...",
-  "position": [10, 20]
+  "ok": true,
+  "data": {
+    "valid": true,
+    "payload": {
+      "email": "player@example.com",
+      "issued_at": 1700000000,
+      "expires_at": 1702592000
+    }
+  }
 }
 ```
 
 ---
 
-# 5. Heartbeats
+# 7. Island Directory
 
-Nodes may send periodic heartbeats to keep connections alive.
+The Island Directory acts as a certificate authority (CA) for islands.
+
+## 7.1 Island Registration Flow
+
+```
++-------------+          +-----------------------+
+| Island      |          | Island Directory      |
++------+------+          +-----------+-----------+
+       |                             |
+       | POST register_island        |
+       |---------------------------->|
+       |                             |
+       | Directory verifies request  |
+       | Generates certificate       |
+       |                             |
+       | <---- island certificate ---|
+```
+
+---
+
+## 7.2 `register_island`
+
+### Request
 
 ```json
 {
-  "type": "PING"
+  "action": "register_island",
+  "data": {
+    "public_key": "<island public key>",
+    "name": "My Cool Island",
+    "owner": "player@example.com"
+  }
 }
 ```
 
-Clients respond with:
+### Response
 
 ```json
 {
-  "type": "PONG"
+  "ok": true,
+  "data": {
+    "certificate": "<signed certificate>"
+  }
 }
 ```
 
 ---
 
-# 6. Error Handling
+# 8. Island Handshake
 
-All errors follow this format:
+When a client connects to an island:
 
-```json
-{
-  "type": "ERROR",
-  "msg": "Description of the error"
-}
 ```
+Client → Island: send device token
+Island → Identity Service: verify token
+Island → Client: send island certificate
+Client: verify certificate using directory public key
+```
+
+If all checks pass, the session begins.
 
 ---
 
-# 7. Future Extensions
+# 9. Security Considerations
 
-- Chunk streaming
-- Entity updates
-- Combat + interactions
-- Inventory management
-- Node handoff (player crossing region boundaries)
-- World persistence
-- Server‑side simulation ticks
+- All tokens are signed using Ed25519.  
+- All certificates are signed by the Island Directory.  
+- Tokens include expiry timestamps.  
+- Islands must verify device tokens before allowing gameplay.  
+- Clients must verify island certificates before trusting an island.  
+- No shared secrets exist between islands.  
+- No passwords are stored anywhere.  
 
 ---
 
-# 8. Versioning
+# 10. Version Notes
 
-The protocol will adopt semantic versioning:
+| Version | Notes |
+|---------|-------|
+| **0.1** | Initial login flow. |
+| **0.2** | Added island registration. |
+| **0.3** | Added certificate format. |
+| **0.4** | Introduced `share/` framework. |
+| **0.5** | Moved secrets to `cartographica_data/`. |
+| **0.6** | Added Template helper. |
+| **0.7** | Renamed protocol to **The Archipelago Protocol**. |
 
-```
-major.minor.patch
-```
+---
 
-Example:
+# 11. Glossary
 
-```
-1.0.0
-```
+| Term | Meaning |
+|------|---------|
+| **Archipelago** | The distributed network of islands. |
+| **Island** | A game server hosting a world instance. |
+| **Island Directory** | The trust authority that issues island certificates. |
+| **Identity Service** | Authenticates humans and issues device tokens. |
+| **Device Token** | A signed token proving human identity. |
+| **Island Certificate** | A signed certificate proving island identity. |
+| **Trust Anchor** | A public key distributed with the client. |
+| **Handshake** | The process of verifying identity between client and island. |
 
-Nodes and clients must negotiate compatible versions in the future.
+---
 
-```
+# 12. Future Extensions
+
+- Island‑to‑island federation  
+- Player‑to‑player trust tokens  
+- Island reputation system  
+- Cross‑island travel  
+- Distributed world state  
+
+---
