@@ -31,6 +31,7 @@ class Db
 
     public static function connect(string $dbPath, string $schemaPath): PDO
     {
+
         // Return cached connection if already opened
         if (isset(self::$connections[$dbPath])) {
             return self::$connections[$dbPath];

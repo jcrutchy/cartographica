@@ -33,7 +33,7 @@ class RegisterIsland
         $cert = Certificate::issue($publicKey, $name, $ownerEmail);
 
         // Store in SQLite using the shared DB helper
-        $pdo = Db::conn();
+        $pdo = Db::connect(Config::sqlitePath(),__DIR__."/../schema.sql");
 
         $stmt = $pdo->prepare("
             INSERT INTO islands (

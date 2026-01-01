@@ -22,7 +22,7 @@ abstract class TestCase
             ]
         ];
     
-        return file_get_contents($url, false, stream_context_create($options));
+        return file_get_contents($url."&test", false, stream_context_create($options));
     }
 
     protected function assertTrue($condition, string $message = '', array $data = []): void

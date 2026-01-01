@@ -6,8 +6,11 @@ use cartographica\share\Request;
 use cartographica\share\Response;
 use cartographica\share\Crypto;
 use cartographica\share\Logger;
+use cartographica\share\Db;
+use cartographica\share\Smtp;
+use cartographica\share\Template;
+use cartographica\share\SharedConfig;
 use cartographica\services\identity\Config;
-use cartographica\services\identity\Mailer;
 
 class RequestLogin
 {
@@ -35,16 +38,39 @@ class RequestLogin
 
         // Sign with identity private key
         $privateKey = file_get_contents(Config::privateKey());
-        $token      = Crypto::sign($payload, $privateKey);
+        $signature  = Crypto::sign($payload, $privateKey);
+
+        // Build token object expected by Redeem
+        $token = json_encode([
+            "payload"   => $payload,
+            "signature" => $signature
+        ]);
 
         // Build login link
         $link = Config::loginLinkBase() . urlencode($token);
 
-        // Send email via Mailer helper
-        $mailer = new Mailer();
-        $mailer->sendLoginLink($email, $link);
+        // Send email: link to player, notification to admin
+        $smtp=new Smtp();
 
-        $pdo = Db::conn();
+        $html = Template::render(
+            __DIR__ . "/../templates/login_email.html",
+            [
+                "email" => $email,
+                "link"  => $link
+            ]
+        );
+        $smtp->send($email,"Cartographica: login link",$html);
+
+        $html = Template::render(
+            __DIR__ . "/../templates/login_email_admin.html",
+            [
+                "email" => $email
+            ]
+        );
+        $smtp->send(SharedConfig::get("admin_email"),"cartographica: email login requested",$html);
+
+        // Log login attempt
+        $pdo = Db::connect(Config::sqlitePath(),__DIR__."/../schema.sql");
         $stmt = $pdo->prepare("
             INSERT INTO login_attempts (email, requested_at, ip_address)
             VALUES (:email, :time, :ip)

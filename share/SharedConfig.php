@@ -14,7 +14,6 @@ use cartographica\share\SharedConfig;
 $webRoot=SharedConfig::get("web_root");
 $from=SharedConfig::get("smtp_from_email");
 $admin=SharedConfig::get("admin_email");
-$config=SharedConfig::all();
 
 */
 
@@ -24,47 +23,28 @@ use Exception;
 
 class SharedConfig
 {
-    private static ?array $config = null;
+    private static ?array $cache = null;
 
-    /**
-     * Load config.json once and cache it.
-     */
     private static function load(): void
     {
-        if (self::$config !== null) {
-            return;
+        if (self::$cache !== null) {
+            return; // already loaded
         }
 
-        $path=CARTOGRAPHICA_SHARED_CONFIG;
+        $path = CARTOGRAPHICA_SHARED_CONFIG;
 
         if (!file_exists($path)) {
-            throw new Exception("Shared config file not found: $path");
+            throw new \RuntimeException("Shared config not found: $path");
         }
 
-        $json = json_decode(file_get_contents($path), true);
-
-        if (!is_array($json)) {
-            throw new Exception("Invalid shared config JSON at: $path");
-        }
-
-        self::$config = $json;
+        $json = file_get_contents($path);
+        self::$cache = json_decode($json, true);
     }
 
-    /**
-     * Retrieve a config value by key.
-     */
     public static function get(string $key, $default = null)
     {
         self::load();
-        return self::$config[$key] ?? $default;
-    }
 
-    /**
-     * Retrieve the entire config array.
-     */
-    public static function all(): array
-    {
-        self::load();
-        return self::$config;
+        return self::$cache[$key] ?? $default;
     }
 }

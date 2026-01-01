@@ -32,7 +32,7 @@ class Http {
             ]
         ]);
 
-        $body = file_get_contents($url, false, $context);
+        $body = file_get_contents($url.$url_suffix, false, $context);
         $status = self::extractStatus($http_response_header ?? []);
 
         return ["status" => $status, "body" => $body];
@@ -47,7 +47,7 @@ class Http {
             ]
         ]);
 
-        $body = file_get_contents($url, false, $context);
+        $body = file_get_contents($url.$url_suffix, false, $context);
         $status = self::extractStatus($http_response_header ?? []);
 
         return ["status" => $status, "body" => $body];

@@ -24,6 +24,7 @@ $mailer->send("no-reply@cartographica.com",$email,"Login link","<p>Click here to
 
 namespace cartographica\share;
 
+use cartographica\share\SharedConfig;
 use Exception;
 
 class Smtp
@@ -35,25 +36,19 @@ class Smtp
     private string $cafile;
     private $conn;
 
-    public function __construct(
-        string $host,
-        int $port,
-        string $username,
-        string $password,
-        string $cafile
-    ) {
-        $this->host     = $host;
-        $this->port     = $port;
-        $this->username = $username;
-        $this->password = $password;
-        $this->cafile   = $cafile;
+    public function __construct() {
+        $this->host=SharedConfig::get("smtp_host");
+        $this->port=SharedConfig::get("smtp_port");
+        $this->cafile=CARTOGRAPHICA_DATA_DIR.SharedConfig::get("cacert_file_relative");
+        $this->loadCredentials();
     }
 
     // ------------------------------------------------------------
     // Load credentials from JSON file
     // ------------------------------------------------------------
-    public static function loadCredentials(string $path): array
+    private function loadCredentials(): void
     {
+        $path=CARTOGRAPHICA_DATA_DIR.SharedConfig::get("smtp_creds_file_relative");
         if (!file_exists($path)) {
             throw new Exception("SMTP credential file not found: $path");
         }
@@ -64,7 +59,8 @@ class Smtp
             throw new Exception("SMTP credential file missing username/password");
         }
 
-        return $creds;
+        $this->username = $creds['username'];
+        $this->password = $creds['password'];
     }
 
     // ------------------------------------------------------------
@@ -72,6 +68,7 @@ class Smtp
     // ------------------------------------------------------------
     private function connect(): void
     {
+        
         $context = stream_context_create([
             'ssl' => [
                 'cafile'            => $this->cafile,
@@ -140,12 +137,13 @@ class Smtp
     // Send an email
     // ------------------------------------------------------------
     public function send(
-        string $from,
         string $to,
         string $subject,
-        string $htmlBody,
-        ?string $replyTo = null
+        string $htmlBody
     ): bool {
+        $from=SharedConfig::get("smtp_from_email");
+        $replyTo=null;
+
         $this->connect();
 
         // MAIL FROM / RCPT TO

@@ -47,4 +47,13 @@ class Request {
         $raw = file_get_contents("php://input");
         return json_decode($raw, true) ?? [];
     }
+
+    public function header(string $name) {
+        return false; # TODO
+    }
+
+    public function ip() {
+        return $_SERVER["REMOTE_ADDR"];
+    }
+
 }

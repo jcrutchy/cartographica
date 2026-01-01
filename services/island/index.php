@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__ . "/../../share/Env.php";
 require __DIR__ . "/../../share/Autoload.php";
+require __DIR__ . "/../../share/Env.php";
 
 use cartographica\share\Request;
 use cartographica\share\Router;

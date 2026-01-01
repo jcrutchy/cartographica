@@ -6,13 +6,17 @@ Env.php
 =======
 
 Purpose:
-Store shared configuration constants.
-
-Usage:
-$config=shared_config();
-$webRoot=$config["web_root"];
+Assign top level global configuration constants.
 
 */
 
-define("CARTOGRAPHICA_DATA_DIR",dirname(__DIR__)."_data");
+$data_dir=dirname(__DIR__)."_data";
+if ((isset($_GET["test"])==true) and ($_SERVER["REMOTE_ADDR"]=="::1"))
+{
+  unset($_GET["test"]);
+  $data_dir.="/_testdata";
+}
+
+define("CARTOGRAPHICA_DATA_DIR",$data_dir);
+
 define("CARTOGRAPHICA_SHARED_CONFIG",CARTOGRAPHICA_DATA_DIR."/shared/config.json");
