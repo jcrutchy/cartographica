@@ -1,10 +1,24 @@
 
 ---
 
-# 🌍 **Cartographica — The Archipelago Protocol**  
-### *A friendly guide to setting up and developing the Cartographica distributed world services*
+# 🌍 **Cartographica — The Archipelago**
 
-Welcome to Cartographica!  
+Welcome to Cartographica!
+
+---
+
+## 🌍 **What the game feels like from a player’s perspective**
+
+Cartographica is a slow‑burn exploration and settlement game where you’re dropped into a vast, mostly unknown world and asked to make sense of it one discovery at a time. You begin with almost nothing: a small island, a handful of basic tools, and a map that’s more blank space than information. Your first steps are simple — explore your surroundings, mark what you find, and start building the foundations of a place you can call home. But as you uncover more of the world, the scale of what’s possible begins to open up.
+
+Every island you encounter has its own personality. Some are lush and resource‑rich, others are barren and harsh, and a few hide secrets that only reveal themselves after careful observation. You chart coastlines, map terrain, record landmarks, and gradually stitch together a living atlas of the world. The more you explore, the more the world feels like something you’re genuinely uncovering rather than something handed to you.
+
+As your settlement grows, so does your connection to the wider world. You’ll discover other islands, establish routes between them, and eventually link your discoveries into a shared directory that other players can interact with. The game rewards curiosity and patience — there’s no rush, no pressure, just the quiet satisfaction of turning the unknown into something familiar and meaningful.
+
+At its heart, Cartographica is about discovery, connection, and the joy of watching a world take shape because you were the one who mapped it. It’s a game for players who enjoy exploration for its own sake, who like the feeling of uncovering patterns, and who appreciate a world that reveals itself gradually rather than all at once.
+
+---
+
 This project implements **The Archipelago Protocol**, a lightweight, game‑friendly system for connecting players, islands (servers), and trust authorities into a shared world.
 
 This README will help you:
@@ -18,6 +32,8 @@ This README will help you:
 - extend the system  
 
 This is a developer‑friendly document — no corporate jargon, no over‑formal RFC language. Just clear explanations and practical steps.
+
+**This game has been developed with the assistance of LLM tools including Copilot and Gemini.**
 
 ---
 
