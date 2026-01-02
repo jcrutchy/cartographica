@@ -6,23 +6,22 @@ abstract class TestCase
 {
     private array $results = [];
 
-    protected function post($url, array $data) {
+    protected function post($url, array $data)
+    {
         $body = http_build_query($data);
-    
         $options = [
-            "http" => [
-                "method"  => "POST",
-                "header"  =>
-                    "Content-Type: application/x-www-form-urlencoded\r\n" .
-                    "Content-Length: " . strlen($body) . "\r\n" .
-                    "User-Agent: PHPTestClient\r\n" .
+            "http"=> [
+                "method"=>"POST",
+                "header"=>
+                    "Content-Type: application/x-www-form-urlencoded\r\n".
+                    "Content-Length: ".strlen($body)."\r\n".
+                    "User-Agent: CartographicaTestHarness\r\n".
                     "Connection: close\r\n",
-                "content" => $body,
-                "ignore_errors" => true
+                "content"=>$body,
+                "ignore_errors"=>true
             ]
         ];
-    
-        return file_get_contents($url."&test", false, stream_context_create($options));
+        return file_get_contents($url."&test",false,stream_context_create($options));
     }
 
     protected function assertTrue($condition, string $message = '', array $data = []): void

@@ -2,9 +2,10 @@
 
 namespace cartographica\services\identity\controllers;
 
+use cartographica\share\Certificate;
+use cartographica\share\Logger;
 use cartographica\share\Request;
 use cartographica\share\Response;
-use cartographica\share\Crypto;
 use cartographica\services\identity\Config;
 
 class Verify
@@ -18,17 +19,28 @@ class Verify
 
   public function handle(): void
   {
-    $tokenJson=$this->req->post("device_token");
+    $tokenJson=$this->req->post("session_token");
     if (!$tokenJson)
     {
-      Response::error("Missing device token.");
+      Response::error("Missing session token.");
     }
-    $expiry=600; # 10 minutes
-    $result=Certificate::verify(new Config(),$tokenJson,$expiry);
-    if ($result===false)
+    $config=new Config();
+    $result=Certificate::verify($config,$tokenJson);
+    if ($result["valid"]==false)
     {
-      Response::error("Invalid device token.");
+      Response::error($result["error"]);
     }
+    $payload=$result["payload"];
+    if ($payload["type"]!=="session_token")
+    {
+      Response::error("Invalid token type.");
+    }
+    if (!isset($payload["email"]))
+    {
+      Response::error("Session token missing email field.");
+    }
+    $email=$payload["email"];
+    Logger::info("Session token for $email verified");
     Response::success($result);
   }
 }

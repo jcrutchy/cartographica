@@ -2,9 +2,11 @@
 
 namespace cartographica\services\identity\controllers;
 
+use cartographica\share\Certificate;
+use cartographica\share\Db;
+use cartographica\share\Logger;
 use cartographica\share\Request;
 use cartographica\share\Response;
-use cartographica\share\Crypto;
 use cartographica\services\identity\Config;
 
 class Redeem
@@ -23,21 +25,45 @@ class Redeem
     {
       Response::error("Missing email token.");
     }
-    $expiry=600; # 10 minutes
-    $result=Certificate::verify(new Config(),$tokenJson,$expiry);
-    if ($result===false)
+    $config=new Config();
+    $result=Certificate::verify($config,$tokenJson);
+    if ($result["valid"]==false)
     {
-      Response::error("Invalid email token.");
+      Response::error($result["error"]);
     }
     $payload=$result["payload"];
+    if ($payload["type"]!=="email_token")
+    {
+      Response::error("Invalid token type.");
+    }
+    if (!isset($payload["email"]))
+    {
+      Response::error("Email token missing email field.");
+    }
     $email=$payload["email"];
-    $session_id=Crypto::randomId(32);
-    $extra=["email"=>$email,"session_id"=>$session_id];
+    if (!isset($payload["player_id"]))
+    {
+      Response::error("Email token missing player_id field.");
+    }
+    if (!isset($payload["email_token_id"]))
+    {
+      Response::error("Email token missing email_token_id field.");
+    }
+    $player_id=$payload["player_id"];
+    $session_id=Certificate::random_id(32);
+    $extra=["email"=>$email,"session_id"=>$session_id,"player_id"=>$player_id];
     $expiry=86400*30; # 30 days
-    $device_token=Certificate::issue(Config,$extra,$expiry);
-
-
-    $result["device_token"]=$deviceToken;
+    $result=Certificate::issue($config,$extra,$expiry,"session_token");
+    if ($result["valid"]==false)
+    {
+      Response::error($result["error"]);
+    }
+    $payload=$result["payload"];
+    unset($result["valid"]);
+    $pdo=Db::connect($config->sqlitePath(),__DIR__."/../schema.sql");
+    $stmt=$pdo->prepare("INSERT INTO session_tokens (email,issued_at,expires_at,player_id,session_token) VALUES (:email,:issued_at,:expires_at,:player_id,:session_token)");
+    $stmt->execute([":email"=>$email,":issued_at"=>$payload["issued_at"],":expires_at"=>$payload["expires_at"],":player_id"=>$payload["player_id"],":session_token"=>json_encode($result)]);
+    Logger::info("Session token issued for $email");
     Response::success($result);
   }
 }

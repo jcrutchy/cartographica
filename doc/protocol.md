@@ -1,21 +1,21 @@
-
 ---
 
 # 🌊 **The Archipelago Protocol**  
+*A friendly, secure protocol for a world of islands.*
 
 ---
 
 # 1. Introduction
 
-The **Archipelago Protocol** defines how Cartographica’s distributed services communicate, authenticate, and exchange trust. It is designed for a game world composed of many independent “islands” (servers), all connected through a lightweight, secure, and human‑friendly network.
+The **Archipelago Protocol** defines how Cartographica’s distributed services communicate, authenticate, and exchange trust. It is designed for a world composed of many independent “islands” (servers), all connected through a lightweight, secure, and human‑friendly network.
 
 This document describes:
 
 - the architecture  
 - the trust model  
-- the JSON message format  
+- the certificate system  
 - the identity login flow  
-- the island registration and certificate flow  
+- the atlas island‑registration flow  
 - the island handshake  
 - security considerations  
 - version notes  
@@ -28,12 +28,12 @@ The tone is intentionally friendly — this is a game, not a spacecraft navigati
 # 2. High‑Level Architecture
 
 ```
-                 verifies device tokens                   +-------------------+
+                 verifies session tokens                 +-------------------+
     +---------------------------------------------------> |  Identity Service |
     |                                                     +--------------+----+
     |                                                                    ^
     |                                                                    |
-    |                                             verifies device tokens | 
+    |                                             verifies session tokens| 
     |                                                                    |
 +---+----+        discovers islands                                      |
 | Client | ------------------------------------------------------+       |
@@ -42,7 +42,7 @@ The tone is intentionally friendly — this is a game, not a spacecraft navigati
     | selects island                                             |       |
     v                                                            v       |
 +-----------+             registers / updates             +------------------+
-|  Island 1 | ------------------------------------------> |        Atlas     |
+|  Island 1 | ------------------------------------------> |       Atlas      |
 +-----------+                                             +------------------+
     ^                                                                ^
     |                                                                |
@@ -51,14 +51,13 @@ The tone is intentionally friendly — this is a game, not a spacecraft navigati
 +-----------+                                                        |
 |  Island 2 | -------------------------------------------------------+
 +-----------+
-
 ```
 
 ### Components
 
 | Component | Purpose |
 |----------|---------|
-| **Identity Service** | Authenticates humans via email login links. Issues device tokens. |
+| **Identity Service** | Authenticates humans via email login links. Issues session tokens. |
 | **Atlas Service** | Acts as a certificate authority (CA). Issues island certificates. |
 | **Island Server** | Hosts a game world “island”. Uses certificates to prove identity. |
 | **Client** | The human player’s game client. |
@@ -66,8 +65,6 @@ The tone is intentionally friendly — this is a game, not a spacecraft navigati
 ---
 
 # 3. Folder Structure
-
-The protocol assumes the following layout:
 
 ```
 cartographica/
@@ -94,18 +91,18 @@ All secrets, logs, databases, and keys live in `cartographica_data/`.
 The Archipelago Protocol uses a simple PKI‑style trust chain:
 
 ```
-Human → Identity Service → Device Token
+Human → Identity Service → Session Token
 Island → Atlas → Island Certificate
 ```
 
 ### Human Authentication
 - Humans authenticate via **email login links**.
-- The identity service signs a **device token** with its private key.
-- Clients present device tokens to islands.
+- The identity service issues a **session token**.
+- Clients present session tokens to islands.
 
 ### Island Authentication
 - Islands register with the **atlas service**.
-- The atlas service signs an **island certificate**.
+- The atlas service issues an **island certificate**.
 - Islands present certificates to clients and other islands.
 
 ### Trust Anchors
@@ -116,358 +113,11 @@ These are distributed with the game client.
 
 ---
 
-# 5. JSON Message Format
+# 5. Certificate System
 
-All messages follow this structure:
+All authentication and identity objects in Cartographica use the same cryptographic structure: a **signed certificate**.
 
-```json
-{
-  "action": "string",
-  "data": { ... }
-}
-```
-
-Responses:
-
-```json
-{
-  "ok": true,
-  "data": { ... }
-}
-```
-
-Errors:
-
-```json
-{
-  "ok": false,
-  "error": "Message describing the error"
-}
-```
-
----
-
-# 6. Identity Service
-
-## 6.1 Authentication Flow Overview
-
-```
-+--------+        +------------------+        +------------------+             +--------+
-| Client |        | Identity Service |        | Email Provider   |             | Island |
-+---+----+        +---------+--------+        +---------+--------+             +----+---+
-    |                       |                           |                           |
-    |--POST request_login-->|                           |                           |
-    |      (generate token) |--Send email with token--->|                           |
-    | <----------User clicks emailed link-------------- |                           |
-    |-----POST redeem------>| (verify link token)       |                           |
-    | <-----device token----+ (signed)                  |                           |
-    |                       |                           |                           |
-    |  (returning player)   |                           |                           |
-    | ----POST verify-----> | (device token received)   |                           |
-    | <---valid signature---+                           |                           |
-    |                       |                           |                           |
-    | -------------------POST device token to selected island---------------------> |
-    |                       | <-------------POST verify (device token)------------- |
-    |                       | -------------------valid signature------------------> |
-    | <--------------------------player & world state------------------------------ |
-```
-
----
-
-## 6.2 `request_login` (POST, sent from the web client js)
-
-### Request
-
-```json
-{
-  "action": "request_login",
-  "email": "player@example.com"
-}
-```
-
-### Response (sent to the web client js)
-
-```json
-{
-  "ok": true,
-  "status": "sent"
-}
-```
-
----
-
-## 6.3 `redeem`
-
-### Request (POST, sent from the web client js)
-
-```json
-{
-  "action": "redeem",
-  "token": "<signed login token>"
-}
-```
-
-### Response (sent to the web client js)
-
-```json
-{
-  "ok": true,
-  "device_token": "<signed device token>",
-  "payload": {
-    "email": "player@example.com",
-    "issued_at": 1700000000,
-    "expires_at": 1702592000
-  }
-}
-```
-
----
-
-## 6.4 `verify` (sent to the web client js)
-
-Used by clients and islands to verify device tokens.
-
-### Request (POST)
-
-```json
-{
-  "action": "verify",
-  "device_token": "<signed device token>"
-}
-```
-
-### Response
-
-```json
-{
-  "ok": true,
-  "valid": true,
-  "payload": {
-    "email": "player@example.com",
-    "issued_at": 1700000000,
-    "expires_at": 1702592000
-  }
-}
-```
-
----
-
-# 7. Atlas
-
-The atlas service acts as a certificate authority (CA) for islands.
-
-## 7.1 Island Registration Flow
-
-```
-+-------------+          +-----------------------+
-|   Island    |          |         Atlas         |
-+------+------+          +-----------+-----------+
-       |                             |
-       | POST register_island        |
-       |---------------------------->|
-       |                             |
-       | Atlas verifies request      |
-       | Generates certificate       |
-       |                             |
-       | <---- island certificate ---|
-```
-
----
-
-## 7.2 `register_island`
-
-### Request
-
-```json
-{
-  "action": "register_island",
-  "public_key": "<island public key>",
-  "name": "My Cool Island",
-  "owner": "player@example.com"
-}
-```
-
-### Response
-
-```json
-{
-  "ok": true,
-  "certificate": "<signed certificate>"
-}
-```
-
----
-
-# 8. Island Handshake
-
-When a client connects to an island:
-
-```
-Client → Island: send device token
-Island → Identity Service: verify token
-Island → Client: send island certificate
-Client: verify certificate using atlas public key
-```
-
-If all checks pass, the session begins.
-
----
-
-# 9. Security Considerations
-
-- All tokens are signed using Ed25519.  
-- All certificates are signed by the atlas service.  
-- Tokens include expiry timestamps.  
-- Islands must verify device tokens before allowing gameplay.  
-- Clients must verify island certificates before trusting an island.  
-- No shared secrets exist between islands.  
-- No passwords are stored anywhere.  
-
----
-
-## **Signed Payloads, Tokens, and Certificates**
-
-### **Overview**
-Cartographica uses a unified cryptographic format for all authentication and identity assertions. Every “token” or “certificate” in the system is a **signed payload**, consisting of:
-
-- **payload** — a JSON object containing the data being asserted  
-- **signature** — a digital signature of the payload, created using the issuing service’s private key  
-
-Any service or island can verify the authenticity of a signed payload using the issuing service’s **public key**.
-
-This mechanism is used for:
-
-- **Email tokens** (prove email ownership)  
-- **Session tokens** (prove authenticated player sessions)  
-- **Island certificates** (prove island identity and ownership)  
-- **Atlas certificates** (prove atlas identity)  
-
-All of these objects share the same structure and verification rules.
-
----
-
-## **Signed Payload Structure**
-
-Every signed payload has the form:
-
-```json
-{
-  "payload": { ... },
-  "signature": "base64-encoded-signature"
-}
-```
-
-### **Payload Requirements**
-All payloads must include:
-
-- `issued` — UNIX timestamp  
-- `expiry` — UNIX timestamp  
-
-Additional fields depend on the issuing service.
-
----
-
-## **Email Token**
-
-Issued by the **Identity Service** to prove ownership of an email address.
-
-**Payload fields:**
-
-- `email`  
-- `issued`  
-- `expiry`  
-
-**Usage:**  
-Sent to the player via email. Redeemed by the client to obtain a session token.
-
----
-
-## **Session Token**
-
-Issued by the **Identity Service** after successful email token redemption.  
-Represents an authenticated session for a specific player.
-
-**Payload fields:**
-
-- `player_id` — stable identifier derived from the email  
-- `session_token` — random 32‑byte session credential  
-- `issued`  
-- `expiry` (typically 30 days)  
-
-**Usage:**  
-The client presents the session token to islands.  
-Islands verify the signature using the identity service public key.
-
----
-
-## **Island Certificate**
-
-Issued by the **Atlas Service** to prove the identity and ownership of an island.
-
-**Payload fields:**
-
-- `island_name`  
-- `owner_email`  
-- `public_key` (island’s public key)  
-- `issued`  
-- `expiry`  
-
-**Usage:**  
-Islands present this certificate to clients or other services.  
-Anyone can verify it using the atlas public key.
-
----
-
-## **Verification**
-
-Any service or island verifies a signed payload by:
-
-1. Recomputing the signature over the `payload` JSON  
-2. Checking the signature using the issuing service’s public key  
-3. Ensuring `issued` and `expiry` are valid  
-4. Trusting the contents of the payload if verification succeeds  
-
-No service needs to contact the issuer to verify a token or certificate.
-
----
-
-## **Security Model**
-
-- Private keys never leave their respective services  
-- Public keys are distributed and cached  
-- All tokens and certificates are self‑contained and offline‑verifiable  
-- Clients cannot forge or modify tokens  
-- Islands do not need to contact the identity service during gameplay  
-
----
-
-# 📘 **Protocol Specification: Certificates and Tokens**
-
-## 1. Overview
-
-Cartographica uses a unified cryptographic format for all authentication and identity assertions. These objects are referred to as **certificates** or **tokens**, depending on context, but they share the same structure and verification rules.
-
-A certificate is a **signed payload**, consisting of:
-
-- a JSON **payload** containing the data being asserted  
-- a **signature** generated using the issuing service’s private key  
-
-Any service or island can verify a certificate using the issuing service’s public key.
-
-Certificates are used for:
-
-- **Email tokens** (prove email ownership)  
-- **Session tokens** (prove authenticated player sessions)  
-- **Island certificates** (prove island identity and ownership)  
-- **Atlas certificates** (prove atlas identity)  
-
-All certificates follow the same format and validation rules.
-
----
-
-## 2. Certificate Format
-
-A certificate is a JSON object with the following structure:
+## 5.1 Certificate Format
 
 ```json
 {
@@ -481,12 +131,12 @@ A certificate is a JSON object with the following structure:
 }
 ```
 
-### Required payload fields
+### Required fields
 
 | Field        | Description |
 |--------------|-------------|
-| `issued_at`  | UNIX timestamp when the certificate was created |
-| `expires_at` | UNIX timestamp after which the certificate is invalid |
+| `issued_at`  | When the certificate was created |
+| `expires_at` | When the certificate becomes invalid |
 | `type`       | One of the allowed certificate types |
 
 ### Allowed certificate types
@@ -498,136 +148,220 @@ island_certificate
 atlas_certificate
 ```
 
-Each certificate type may include additional fields depending on its purpose.
+## 5.2 Signing Rules
+
+- Payload encoded with `json_encode(..., JSON_UNESCAPED_SLASHES)`
+- Signed using `openssl_sign(..., OPENSSL_ALGO_SHA256)`
+- Signature is base64‑encoded
+
+## 5.3 Verification Rules
+
+A certificate is valid only if:
+
+1. JSON structure is correct  
+2. `payload` and `signature` exist  
+3. `issued_at`, `expires_at`, and `type` exist  
+4. `issued_at` ≤ now + 300 seconds  
+5. `expires_at` > `issued_at`  
+6. now < `expires_at`  
+7. `type` is allowed  
+8. Signature verifies using the issuer’s public key  
+
+Verification returns:
+
+```json
+{ "valid": true, "payload": { ... } }
+```
+
+or
+
+```json
+{ "valid": false, "error": "<reason>" }
+```
 
 ---
 
-## 3. Signing Rules
+# 6. Identity Service
 
-Certificates are signed using the issuing service’s **private key**.
+The Identity Service provides passwordless login using email links and signed certificates.
 
-### Signing process
-
-1. Construct the payload as a JSON object.
-2. Encode the payload using:
+## 6.1 Authentication Flow
 
 ```
-json_encode(payload, JSON_UNESCAPED_SLASHES)
+Client → Identity: request_login(email)
+Identity → Email Provider: send login link
+User clicks link
+Client → Identity: redeem(email_token)
+Identity → Client: session_token
+Client → Island: session_token
+Island → Identity: verify(session_token)
+Island → Client: welcome to the island
 ```
 
-3. Sign the resulting JSON string using:
+---
 
+## 6.2 `POST /identity/request-login`
+
+### Request
+
+```json
+{ "email": "player@example.com" }
 ```
-openssl_sign(..., OPENSSL_ALGO_SHA256)
+
+### Response
+
+```json
+{ "status": "sent" }
 ```
 
-4. Base64‑encode the signature.
+### Steps
 
-### Output
+1. Normalize and validate email  
+2. Validate MX record  
+3. Generate:
+   - `player_id` (16‑byte hex)
+   - `email_token_id` (16‑byte hex)
+4. Issue an `email_token` certificate:
 
-The issuing service returns:
+```json
+{
+  "email": "<email>",
+  "player_id": "<player_id>",
+  "email_token_id": "<email_token_id>"
+}
+```
+
+5. Email the login link  
+6. Log the attempt in `login_attempts`:
+
+| Field | Value |
+|-------|-------|
+| email | user email |
+| requested_at | timestamp |
+| ip_address | client IP |
+| player_id | generated player ID |
+| email_token_id | generated token ID |
+
+---
+
+## 6.3 `POST /identity/redeem`
+
+### Request
+
+```json
+{ "email_token": "<json>" }
+```
+
+### Response
+
+Returns a **session token certificate**.
+
+### Steps
+
+1. Verify certificate  
+2. Ensure `type === "email_token"`  
+3. Ensure `email`, `player_id`, `email_token_id` exist  
+4. Generate `session_id` (32‑byte hex)  
+5. Issue a `session_token` certificate:
+
+```json
+{
+  "email": "<email>",
+  "player_id": "<player_id>",
+  "session_id": "<session_id>"
+}
+```
+
+6. Store in `session_tokens`  
+7. Return the certificate
+
+---
+
+## 6.4 `POST /identity/verify`
+
+### Request
+
+```json
+{ "session_token": "<json>" }
+```
+
+### Response
 
 ```json
 {
   "valid": true,
   "payload": { ... },
-  "signature": "<base64 signature>"
+  "signature": "..."
 }
 ```
 
-If signing fails, the service returns:
+### Steps
+
+1. Verify certificate  
+2. Ensure `type === "session_token"`  
+3. Ensure `email` exists  
+4. Return certificate  
+
+Used by islands to authenticate players.
+
+---
+
+# 7. Atlas Service
+
+The Atlas Service acts as a certificate authority (CA) for islands.
+
+## 7.1 Island Registration Flow
+
+```
+Island → Atlas: register_island(public_key, name, owner)
+Atlas: verify request
+Atlas: issue island_certificate
+Atlas → Island: certificate
+```
+
+## 7.2 `POST /atlas/register-island`
+
+### Request
 
 ```json
 {
-  "valid": false,
-  "error": "<error message>"
+  "public_key": "<island public key>",
+  "name": "My Cool Island",
+  "owner": "player@example.com"
+}
+```
+
+### Response
+
+```json
+{
+  "certificate": "<signed island certificate>"
 }
 ```
 
 ---
 
-## 4. Verification Rules
+# 8. Island Handshake
 
-To verify a certificate, a service or island must perform the following checks **in order**:
+When a client connects to an island:
 
-### 4.1 Structural validation
-
-- Certificate must be valid JSON.
-- Must contain both `payload` and `signature`.
-- `payload` must be an object.
-- `signature` must be a string.
-
-### 4.2 Required fields
-
-The payload must contain:
-
-- `issued_at`
-- `expires_at`
-- `type`
-
-### 4.3 Temporal validation
-
-- `issued_at` must not be more than 300 seconds in the future.
-- `expires_at` must be strictly greater than `issued_at`.
-- Current time must be less than `expires_at`.
-
-### 4.4 Type validation
-
-`type` must be one of the allowed certificate types.
-
-### 4.5 Signature validation
-
-1. Re‑encode the payload using:
-
-```
-json_encode(payload, JSON_UNESCAPED_SLASHES)
-```
-
-2. Verify the signature using the issuer’s **public key** and:
-
-```
-openssl_verify(..., OPENSSL_ALGO_SHA256)
-```
-
-3. Verification outcomes:
-
-| Result | Meaning |
-|--------|---------|
-| `1`    | Signature valid |
-| `0`    | Signature invalid |
-| `-1`   | OpenSSL error |
-
-### 4.6 Verification output
-
-On success:
-
-```json
-{
-  "valid": true,
-  "payload": { ... }
-}
-```
-
-On failure:
-
-```json
-{
-  "valid": false,
-  "error": "<error message>"
-}
-```
+1. Client → Island: send session token  
+2. Island → Identity: verify session token  
+3. Island → Client: send island certificate  
+4. Client verifies island certificate using atlas public key  
+5. Gameplay begins  
 
 ---
 
-## 5. Security Properties
+# 9. Security Considerations
 
-This certificate system provides:
-
-- **Integrity** — payloads cannot be modified without invalidating the signature.
-- **Authenticity** — only the holder of the private key can issue certificates.
-- **Offline verification** — islands and services verify certificates without contacting the issuer.
-- **Replay protection** — enforced via `issued_at`, `expires_at`, and type restrictions.
-- **Context isolation** — certificate types prevent cross‑use (e.g., using an island certificate as a session token).
+- All certificates are signed using private keys stored on their respective services  
+- Public keys are distributed with the client  
+- All certificates are offline‑verifiable  
+- No passwords are stored anywhere  
+- Replay protection enforced via timestamps and token IDs  
+- Islands must verify session tokens before allowing gameplay  
+- Clients must verify island certificates before trusting an island  
 
 ---
 
@@ -635,7 +369,7 @@ This certificate system provides:
 
 | Version | Notes |
 |---------|-------|
-| **Dec-25/Jan-26** | Initial protocol development and testing. |
+| **Jan‑2026** | First unified protocol specification. |
 
 ---
 
@@ -645,11 +379,11 @@ This certificate system provides:
 |------|---------|
 | **Archipelago** | The distributed network of islands. |
 | **Island** | A game server hosting a world instance. |
-| **Atlas Service** | The trust authority that issues island certificates. |
-| **Identity Service** | Authenticates humans and issues device tokens. |
-| **Device Token** | A signed token proving human identity. |
+| **Atlas Service** | Issues island certificates. |
+| **Identity Service** | Authenticates humans and issues session tokens. |
+| **Session Token** | A signed certificate proving human identity. |
 | **Island Certificate** | A signed certificate proving island identity. |
 | **Trust Anchor** | A public key distributed with the client. |
-| **Handshake** | The process of verifying identity between client and island. |
+| **Handshake** | The identity verification process between client and island. |
 
 ---
