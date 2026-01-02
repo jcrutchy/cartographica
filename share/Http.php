@@ -7,7 +7,7 @@ Http.php
 
 Purpose:
 Your HTTP client helpers.
-Identity, island, and island‑directory all need to make HTTP requests.
+Identity, island, and atlas all need to make HTTP requests.
 You want consistent error handling and consistent POST/GET behavior.
 
 Features:

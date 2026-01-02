@@ -6,7 +6,7 @@ SharedConfig.php
 ================
 
 Purpose:
-Load and cache shared configuration from the external data directory.
+Load and cache shared configuration from the external data folder.
 Provides a clean interface for retrieving config values.
 
 Usage:
@@ -21,14 +21,14 @@ namespace cartographica\share;
 
 use Exception;
 
-class SharedConfig
+abstract class SharedConfig
 {
     private static ?array $cache = null;
 
-    private static function load(): void
+    protected static function load(): array
     {
         if (self::$cache !== null) {
-            return; // already loaded
+            return self::$cache;
         }
 
         $path = CARTOGRAPHICA_SHARED_CONFIG;
@@ -39,12 +39,16 @@ class SharedConfig
 
         $json = file_get_contents($path);
         self::$cache = json_decode($json, true);
+        return self::$cache;
     }
 
     public static function get(string $key, $default = null)
     {
-        self::load();
-
-        return self::$cache[$key] ?? $default;
+        $config = self::load();
+        return $config[$key] ?? $default;
     }
+
+    abstract public function privateKey(): string;
+
+    abstract public function publicKey(): string;
 }

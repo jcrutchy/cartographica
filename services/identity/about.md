@@ -6,7 +6,7 @@
 The Identity Service is the **human authentication authority** for the Archipelago.  
 It handles email‑based login, issues device tokens, and verifies them for islands.
 
-It mirrors the island-directory service in structure:
+It mirrors the Atlas service in structure:
 
 ```
 services/
@@ -37,7 +37,7 @@ And it uses the shared framework:
 
 ---
 
-# 🧱 **1. Directory Structure**
+# 🧱 **1. Folder Structure**
 
 Inside the repo:
 
@@ -56,7 +56,7 @@ services/
       login_email.html
 ```
 
-Inside the external data directory:
+Inside the external data folder:
 
 ```
 cartographica_data/

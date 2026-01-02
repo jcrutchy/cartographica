@@ -3,48 +3,34 @@
 namespace cartographica\tests\identity;
 
 use cartographica\tests\TestCase;
-use cartographica\share\Crypto;
-use cartographica\share\SharedConfig;
+use cartographica\share\Certificate;
 use cartographica\services\identity\Config;
 
 class VerifyTest extends TestCase
 {
-    protected function test(): void
+  protected function test(): void
+  {
+    $extra=["email"=>Config::get("admin_email")];
+    $expiry=600; # 10 minutes
+    $device_token=Certificate::issue(Config,$extra,$expiry);
+    if ($device_token!==false)
     {
-        // Build a valid device token payload
-        $payload = [
-            "email"      => SharedConfig::get("admin_email"),
-            "issued_at"  => time(),
-            "expires_at" => time() + 300
-        ];
-
-        // Sign it with the identity private key
-        $privateKey = file_get_contents(Config::privateKey());
-        $signature = Crypto::sign($payload, $privateKey);
-
-        // URL for the verify action
-        $url = "http://localhost/cartographica/services/identity/index.php?action=verify";
-
-        // Make a real POST request to the server
-        $token = json_encode([
-            "payload"   => $payload,
-            "signature" => $signature
-        ]);
-        $response = $this->post($url, [
-            "device_token" => $token
-        ]);
-
-        // Assertions
-        $this->assertTrue(
-            str_contains($response, '"valid":true'),
-            "Verify should return valid:true",
-            [$response]
-        );
-
-        $this->assertTrue(
-            str_contains($response, '"email":"'.$payload["email"].'"'),
-            "Verify should return the correct email",
-            [$response]
-        );
+      $url=Config::get("web_root")."/services/identity/index.php?action=verify";
+      $response=$this->post($url,["device_token"=>$device_token]);
     }
+    else
+    {
+      $response="error: unable to generate device_token";
+    }
+    $this->assertTrue(
+      str_contains($response, '"valid":true'),
+      "Verify should return valid:true",
+      [$response]
+    );
+    $this->assertTrue(
+      str_contains($response, '"email":"'.$payload["email"].'"'),
+      "Verify should return the correct email",
+      [$response]
+    );
+  }
 }

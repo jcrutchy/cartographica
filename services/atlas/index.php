@@ -7,7 +7,7 @@ use cartographica\share\Request;
 use cartographica\share\Router;
 use cartographica\share\Logger;
 use cartographica\share\Keys;
-use cartographica\services\islanddirectory\Config;
+use cartographica\services\atlas\Config;
 
 // Init logging
 Logger::init(Config::logFile());

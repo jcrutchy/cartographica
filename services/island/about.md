@@ -15,14 +15,14 @@ The Island Server is:
 It sits between:
 
 - **Identity Service** (to verify humans)
-- **Island Directory** (to prove the island is legitimate)
+- **Atlas Service** (to prove the island is legitimate)
 - **Game Client** (to actually play)
 
 Think of it as the “gameplay node” in the Archipelago.
 
 ---
 
-# 🧱 **1. Directory Structure**
+# 🧱 **1. Folder Structure**
 
 Inside your repo:
 
@@ -38,7 +38,7 @@ services/
     schema.sql
 ```
 
-Inside your external data directory:
+Inside your external data folder:
 
 ```
 cartographica_data/
@@ -58,7 +58,7 @@ cartographica_data/
 We’ll start with the minimal viable island:
 
 ### ✔ Loads its island certificate  
-Issued by the Island Directory.
+Issued by the Atlas service.
 
 ### ✔ Verifies device tokens  
 By calling the Identity Service’s `/verify`.
@@ -113,7 +113,7 @@ Client → Island: device_token
 Island → Identity: verify(device_token)
 Identity → Island: valid + payload
 Island → Client: island certificate + island metadata
-Client: verifies certificate using directory public key
+Client: verifies certificate using Atlas public key
 ```
 
 This establishes:

@@ -1,6 +1,6 @@
 <?php
 
-namespace cartographica\services\islanddirectory;
+namespace cartographica\services\atlas;
 
 use cartographica\share\Db as SharedDb;
 

@@ -1,16 +1,16 @@
 
 ---
 
-# 🌊 **Island Directory**
+# 🌊 **Atlas service**
 
-The Island Directory is the **trust authority** for the Archipelago.  
+The Atlas service is the **trust authority** for the Archipelago protocol.
 It issues **island certificates**, stores island metadata, and verifies ownership.
 
 It mirrors the identity service in structure:
 
 ```
 services/
-  island-directory/
+  atlas/
     index.php
     config.php
     routes.php
@@ -34,13 +34,13 @@ And it uses the same shared utilities:
 
 ---
 
-# 🧱 **1. Directory Structure**
+# 🧱 **1. Folder Structure**
 
 Inside your repo:
 
 ```
 services/
-  island-directory/
+  atlas/
     index.php
     config.php
     routes.php
@@ -49,43 +49,43 @@ services/
       VerifyCertificate.php
 ```
 
-Inside your external data directory:
+Inside your external data folder:
 
 ```
 cartographica_data/
   services/
-    island-directory/
-      island-directory.sqlite
-      island-directory_private.pem
-      island-directory_public.pem
+    atlas/
+      atlas.sqlite
+      atlas_private.pem
+      atlas_public.pem
       log/
 ```
 
 ---
 
-# 🔐 **2. What the Island Directory Does**
+# 🔐 **2. What the Atlas service Does**
 
 ### ✔ Registers islands  
 Islands send:
 
-- their public key  
-- their name  
-- the owner’s email  
-- optional metadata  
+- their public key
+- their name
+- the owner’s email
+- optional metadata
 
 ### ✔ Issues certificates  
-The directory signs a certificate containing:
+The Atlas service signs a certificate containing:
 
-- island public key  
-- island name  
-- owner email  
-- issued_at  
-- expires_at  
+- island public key
+- island name
+- owner email
+- issued_at
+- expires_at
 
 ### ✔ Verifies certificates  
 Islands and clients can POST a certificate to check validity.
 
-### ✔ Stores island metadata  
+### ✔ Stores island metadata
 In a SQLite database.
 
 ---
@@ -107,7 +107,7 @@ We’ll use a simple JSON payload, signed with Ed25519:
 Signed using:
 
 ```
-island-directory_private.pem
+atlas_private.pem
 ```
 
 ---

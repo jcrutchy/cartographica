@@ -18,45 +18,26 @@ class Redeem
 
   public function handle(): void
   {
-    $tokenJson=$this->req->post("token");
+    $tokenJson=$this->req->post("email_token");
     if (!$tokenJson)
     {
-      Response::error("Missing token from emailed link.");
+      Response::error("Missing email token.");
     }
-    $token=json_decode($tokenJson, true);
-    if (!is_array($token))
+    $expiry=600; # 10 minutes
+    $result=Certificate::verify(new Config(),$tokenJson,$expiry);
+    if ($result===false)
     {
-      Response::error("Invalid token from emailed link [1].");
+      Response::error("Invalid email token.");
     }
-    if (!isset($token["payload"]) || !isset($token["signature"]))
-    {
-      Response::error("Invalid token from emailed link [2].");
-    }
-    $payload=$token["payload"];
-    $signature=$token["signature"];
-    if (!is_array($payload) || !is_string($signature))
-    {
-      Response::error("Invalid token from emailed link [3].");
-    }
-    if (!isset($payload["expires_at"]))
-    {
-      Response::error("Invalid token from emailed link [4].");
-    }
-    if ($payload["expires_at"]<time())
-    {
-      Response::error("Emailed link token expired.");
-    }
-    $publicKey=@file_get_contents(Config::publicKey());
-    if (!$publicKey)
-    {
-      Response::error("Identity service public key not available.");
-    }
-    $ok=Crypto::verify($payload, $signature, $publicKey);
-    if (!$ok)
-    {
-      Response::error("Invalid token from emailed link [5].");
-    }
-    $deviceToken=Crypto::randomId(32);
-    Response::json(["ok"=> true,"device_token"=>$deviceToken]);
+    $payload=$result["payload"];
+    $email=$payload["email"];
+    $session_id=Crypto::randomId(32);
+    $extra=["email"=>$email,"session_id"=>$session_id];
+    $expiry=86400*30; # 30 days
+    $device_token=Certificate::issue(Config,$extra,$expiry);
+
+
+    $result["device_token"]=$deviceToken;
+    Response::success($result);
   }
 }

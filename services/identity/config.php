@@ -4,7 +4,7 @@ namespace cartographica\services\identity;
 
 use cartographica\share\SharedConfig;
 
-class Config
+class Config extends SharedConfig
 {
     private const BASE = CARTOGRAPHICA_DATA_DIR . "/services/identity";
 
@@ -25,11 +25,7 @@ class Config
     }
 
     public static function loginLinkBase(): string {
-        return SharedConfig::get("web_root") . "/client?token=";
-    }
-
-    public static function adminEmail(): string {
-        return SharedConfig::get("admin_email");
+        return self::get("web_root")."/client?token=";
     }
 
 }

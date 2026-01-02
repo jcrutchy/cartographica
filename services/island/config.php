@@ -4,7 +4,7 @@ namespace cartographica\services\island;
 
 use cartographica\share\SharedConfig;
 
-class Config
+class Config extends SharedConfig
 {
     private const BASE = CARTOGRAPHICA_DATA_DIR . "/services/island";
 
@@ -29,10 +29,10 @@ class Config
     }
 
     public static function identityUrl(): string {
-        return SharedConfig::get("identity_url");
+        return self::get("identity_url");
     }
 
-    public static function directoryUrl(): string {
-        return SharedConfig::get("island_directory_url");
+    public static function atlasUrl(): string {
+        return self::get("atlas_url");
     }
 }

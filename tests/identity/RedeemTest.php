@@ -4,47 +4,33 @@ namespace cartographica\tests\identity;
 
 use cartographica\tests\TestCase;
 use cartographica\share\Crypto;
-use cartographica\share\SharedConfig;
 use cartographica\services\identity\Config;
 
 class RedeemTest extends TestCase
 {
-    protected function test(): void
+  protected function test(): void
+  {
+    $extra=["email"=>Config::get("admin_email")];
+    $expiry=600; # 10 minutes
+    $email_token=Certificate::issue(new Config(),$extra,$expiry);
+    if ($email_token!==false)
     {
-        // Build a valid login token
-        $payload = [
-            "email"      => SharedConfig::get("admin_email"),
-            "issued_at"  => time(),
-            "expires_at" => time() + 300
-        ];
-
-        // Sign it with the identity private key
-        $privateKey = file_get_contents(Config::privateKey());
-        $signature = Crypto::sign($payload, $privateKey);
-
-        // URL of the running identity service
-        $url = "http://localhost/cartographica/services/identity/index.php?action=redeem";
-
-        // Make a real POST request to the server
-        $token = json_encode([
-            "payload"   => $payload,
-            "signature" => $signature
-        ]);
-        $response = $this->post($url, [
-            "token" => $token
-        ]);
-
-        // Assertions
-        $this->assertTrue(
-            str_contains($response, '"ok":true'),
-            "Redeem should return ok:true",
-            [$response]
-        );
-
-        $this->assertTrue(
-            str_contains($response, 'device_token'),
-            "Redeem should return a device_token",
-            [$response]
-        );
+      $url=Config::get("web_root")."/services/identity/index.php?action=redeem";
+      $response=$this->post($url,["email_token"=>$email_token]);
     }
+    else
+    {
+      $response="error: unable to generate email_token";
+    }
+    $this->assertTrue(
+      str_contains($response,'"ok":true'),
+      "Redeem should return ok:true",
+      [$response]
+    );
+    $this->assertTrue(
+      str_contains($response,'device_token'),
+      "Redeem should return a device_token",
+      [$response]
+    );
+  }
 }

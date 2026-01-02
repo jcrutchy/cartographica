@@ -1,11 +1,11 @@
 <?php
 
-namespace cartographica\services\islanddirectory\controllers;
+namespace cartographica\services\atlas\controllers;
 
 use cartographica\share\Request;
 use cartographica\share\Response;
-use cartographica\services\islanddirectory\Db;
-use cartographica\services\islanddirectory\Certificate;
+use cartographica\services\atlas\Db;
+use cartographica\services\atlas\Certificate;
 
 class RegisterIsland
 {

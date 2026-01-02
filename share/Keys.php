@@ -6,7 +6,7 @@ Keys.php
 ========
 
 Purpose:
-Both identity and island‑directory need keypair generation.
+Both identity and atlas services need keypair generation.
 You want a single, consistent implementation.
 
 Features:
