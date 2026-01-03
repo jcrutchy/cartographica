@@ -25,11 +25,11 @@ class RequestLogin
   public function handle(): void
   {
     $email=$this->req->post("email");
-    $email=strtolower(trim($email));
     if (empty($email))
     {
       Response::error("Missing email.");
     }
+    $email=strtolower(trim($email));
     if (!filter_var($email,FILTER_VALIDATE_EMAIL))
     {
       Response::error("Invalid email address.");

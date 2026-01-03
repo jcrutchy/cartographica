@@ -23,37 +23,43 @@ Request::method()
 Request::get($key)
 Request::post($key)
 Request::json()
-Request::header($name)
+Request::header($name) # TODO
 Request::ip()
 
 */
 
 namespace cartographica\share;
 
-class Request {
-    public function method(): string {
-        return $_SERVER["REQUEST_METHOD"] ?? "GET";
-    }
+class Request
+{
+  public function method(): string
+  {
+    return $_SERVER["REQUEST_METHOD"] ?? "GET";
+  }
 
-    public function get(string $key, $default = null) {
-        return $_GET[$key] ?? $default;
-    }
+  public function get(string $key, $default = null)
+  {
+    return $_GET[$key] ?? $default;
+  }
 
-    public function post(string $key, $default = null) {
-        return $_POST[$key] ?? $default;
-    }
+  public function post(string $key, $default = null)
+  {
+    return $_POST[$key] ?? $default;
+  }
 
-    public function json(): array {
-        $raw = file_get_contents("php://input");
-        return json_decode($raw, true) ?? [];
-    }
+  public function json(): array
+  {
+    $raw=file_get_contents("php://input");
+    return json_decode($raw,true) ?? [];
+  }
 
-    public function header(string $name) {
-        return false; # TODO
-    }
+  public function header(string $name)
+  {
+    return false; # TODO
+  }
 
-    public function ip() {
-        return $_SERVER["REMOTE_ADDR"];
-    }
-
+  public function ip()
+  {
+    return $_SERVER["REMOTE_ADDR"];
+  }
 }

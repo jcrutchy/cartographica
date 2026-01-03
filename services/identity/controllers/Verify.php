@@ -8,6 +8,8 @@ use cartographica\share\Request;
 use cartographica\share\Response;
 use cartographica\services\identity\Config;
 
+# TODO: automatic renewing of token?
+
 class Verify
 {
   private Request $req;
@@ -35,11 +37,19 @@ class Verify
     {
       Response::error("Invalid token type.");
     }
+    if ($payload["expires_at"]<time())
+    {
+      Response::error("Session token has expired.");
+    }
     if (!isset($payload["email"]))
     {
       Response::error("Session token missing email field.");
     }
     $email=$payload["email"];
+    if (!filter_var($email,FILTER_VALIDATE_EMAIL))
+    {
+      Response::error("Invalid email in session token.");
+    }
     Logger::info("Session token for $email verified");
     Response::success($result);
   }

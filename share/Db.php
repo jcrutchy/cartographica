@@ -27,31 +27,27 @@ use Exception;
 
 class Db
 {
-    private static array $connections = [];
+  private static array $connections = [];
 
-    public static function connect(string $dbPath, string $schemaPath): PDO
+  public static function connect(string $dbPath, string $schemaPath): PDO
+  {
+    if (isset(self::$connections[$dbPath]))
     {
-
-        // Return cached connection if already opened
-        if (isset(self::$connections[$dbPath])) {
-            return self::$connections[$dbPath];
-        }
-
-        $init = !file_exists($dbPath);
-
-        $pdo = new PDO("sqlite:" . $dbPath);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        if ($init) {
-            if (!file_exists($schemaPath)) {
-                throw new Exception("Missing schema file: $schemaPath");
-            }
-
-            $schemaSql = file_get_contents($schemaPath);
-            $pdo->exec($schemaSql);
-        }
-
-        self::$connections[$dbPath] = $pdo;
-        return $pdo;
+      return self::$connections[$dbPath];
     }
+    $init=!file_exists($dbPath);
+    $pdo=new PDO("sqlite:".$dbPath);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+    if ($init)
+    {
+      if (!file_exists($schemaPath))
+      {
+        throw new Exception("Missing schema file: $schemaPath");
+      }
+      $schemaSql=file_get_contents($schemaPath);
+      $pdo->exec($schemaSql);
+    }
+    self::$connections[$dbPath]=$pdo;
+    return $pdo;
+  }
 }
