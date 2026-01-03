@@ -25,9 +25,9 @@ class Logger {
     private static string $file;
     private static bool $console = true;
 
-    public static function init(string $file, bool $console = true): void {
+    public static function init(string $file): void {
         self::$file = $file;
-        self::$console = $console;
+        self::$console = \cartographica\share\is_cli_mode();
     }
 
     public static function info(string $msg): void {

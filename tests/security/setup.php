@@ -4,12 +4,15 @@ use cartographica\share\Keys;
 use cartographica\services\atlas\Config as AtlasConfig;
 use cartographica\services\identity\Config as IdentityConfig;
 
+$atlas_config=new AtlasConfig();
+$identity_config=new IdentityConfig();
+
 Keys::ensure(
-    IdentityConfig::privateKey(),
-    IdentityConfig::publicKey()
+  $atlas_config->privateKey(),
+  $atlas_config->publicKey()
 );
 
 Keys::ensure(
-    AtlasConfig::privateKey(),
-    AtlasConfig::publicKey()
+  $identity_config->privateKey(),
+  $identity_config->publicKey()
 );

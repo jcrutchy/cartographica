@@ -10,16 +10,19 @@ class ValidSessionTokenTest extends TestCase
 {
   protected function test(): void
   {
-    $email=Config::get("admin_email");
-    $session_id=Certificate::random_id(32);
-    $extra=["email"=>$email,"session_id"=>$session_id];
+    $config=new IdentityConfig();
+    $email=$config->get("admin_email");
+    $player_id=Certificate::random_id(16);
+    $email_token_id=Certificate::random_id(16);
+    $extra=["email"=>$email,"player_id"=>$player_id,"email_token_id"=>$email_token_id];
     $expiry=86400*30; # 30 days
-    $response=Certificate::issue(Config,$extra,$expiry,"session_token");
+    $response=Certificate::issue($config,$extra,$expiry,"session_token");
     if ($response["valid"]==true)
     {
-      $url=Config::get("web_root")."/services/identity/index.php?action=verify";
-      $response=$this->post($url,["email_token"=>$email_token]);
-      $response=Certificate::verify(new Config(),$response);
+      unset($response["valid"]);
+      $session_token_json=json_encode($response);
+      $url=$config->get("web_root")."/services/identity/index.php?action=verify";
+      $response=$this->post($url,["session_token"=>$session_token_json]);
     }
     $this->assertTrue(
       str_contains($response, '"valid":true'),
@@ -27,7 +30,7 @@ class ValidSessionTokenTest extends TestCase
       [$response]
     );
     $this->assertTrue(
-      str_contains($response, '"email":"'.$payload["email"].'"'),
+      str_contains($response, '"email":"'.$email.'"'),
       "Verify should return the correct email",
       [$response]
     );

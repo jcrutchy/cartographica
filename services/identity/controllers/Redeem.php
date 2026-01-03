@@ -60,10 +60,11 @@ class Redeem
     }
     $payload=$result["payload"];
     unset($result["valid"]);
+    $session_token=json_encode($result);
     $pdo=Db::connect($config->sqlitePath(),__DIR__."/../schema.sql");
     $stmt=$pdo->prepare("INSERT INTO session_tokens (email,issued_at,expires_at,player_id,session_token) VALUES (:email,:issued_at,:expires_at,:player_id,:session_token)");
-    $stmt->execute([":email"=>$email,":issued_at"=>$payload["issued_at"],":expires_at"=>$payload["expires_at"],":player_id"=>$payload["player_id"],":session_token"=>json_encode($result)]);
+    $stmt->execute([":email"=>$email,":issued_at"=>$payload["issued_at"],":expires_at"=>$payload["expires_at"],":player_id"=>$payload["player_id"],":session_token"=>$session_token]);
     Logger::info("Session token issued for $email");
-    Response::success($result);
+    Response::success(["session_token"=>$session_token]);
   }
 }

@@ -9,18 +9,14 @@ use cartographica\share\Logger;
 use cartographica\share\Keys;
 use cartographica\services\identity\Config;
 
-// Init logging
 Logger::init(Config::logFile());
 
-// Ensure identity keypair exists
-Keys::ensure(Config::privateKey(), Config::publicKey());
+$config=new Config();
+Keys::ensure($config->privateKey(),$config->publicKey());
 
-// Build request + router
-$request = new Request();
-$router  = new Router($request);
+$request=new Request();
+$router=new Router($request);
 
-// Load routes
 require __DIR__ . "/routes.php";
 
-// Dispatch
 $router->dispatch();

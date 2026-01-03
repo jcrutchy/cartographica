@@ -92,9 +92,8 @@ class RegisterIsland
       Response::error($result["error"]);
     }
 
-    $certificate=$result;
-    unset($certificate["valid"]);
-    $certificate_json=json_encode($certificate);
+    unset($result["valid"]);
+    $certificate=json_encode($result);
 
     $stmt=$pdo->prepare("
       INSERT INTO islands (
@@ -122,13 +121,13 @@ class RegisterIsland
         ":island_name"=>$island_name,
         ":owner_email"=>$owner_email,
         ":public_key"=>$public_key,
-        ":certificate"=>$certificate_json,
+        ":certificate"=>$certificate,
         ":issued_at"=>$payload["issued_at"],
         ":expires_at"=>$payload["expires_at"],
         ":island_key"=>$island_key,
         ":metadata"=>$metadata_json
     ]);
     Logger::info("Island certificate issued for '$island_name' owned by $owner_email");
-    Response::success($result);
+    Response::success(["certificate"=>$certificate]);
   }
 }
