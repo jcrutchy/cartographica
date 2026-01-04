@@ -1,8 +1,9 @@
 export class IslandConnection {
-    constructor(identity, ws_url) {
+    constructor(identity, ws_url, handlers = {}) {
         this.identity = identity;
         this.ws_url = ws_url;
         this.ws = null;
+        this.handlers = handlers; // { onWorld, onPlayerMoved }
     }
 
     connect() {
@@ -22,7 +23,7 @@ export class IslandConnection {
     
             this.ws.onmessage = (ev) => {
                 const msg = JSON.parse(ev.data);
-                onsole.log("WS MESSAGE:", msg);
+                console.log("WS MESSAGE:", msg);
     
                 switch (msg.type)
                 {
@@ -37,10 +38,14 @@ export class IslandConnection {
                         this.ws.send(JSON.stringify({ type: "REQUEST_WORLD" }));
                         break;
                     case "WORLD":
-                        startWorld(msg);
+                        if (this.handlers.onWorld) {
+                            this.handlers.onWorld(msg);
+                        }
                         break;
                     case "PLAYER_MOVED":
-                        world.updatePlayer(msg);
+                        if (this.handlers.onPlayerMoved) {
+                            this.handlers.onPlayerMoved(msg);
+                        }
                         break;
                 }
 

@@ -22,7 +22,8 @@ use cartographica\share\Response;
 
 */
 
-spl_autoload_register(function ($class) {
+spl_autoload_register(function ($class)
+{
 
     // Only handle Cartographica namespaces
     $prefix = "cartographica\\";

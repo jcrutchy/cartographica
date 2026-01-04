@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Zoom + Pan Test (World-Centered Camera)</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #111;
+  }
+  canvas {
+    display: block;
+    background: #222;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ---------------------------------------------------------------------------
+// CAMERA MODEL (same style as your old code)
+// cam.x, cam.y = world coords at screen center
+// cam.scale    = world units per pixel
+// ---------------------------------------------------------------------------
+const cam = {
+  x: 0,        // world x at screen center
+  y: 0,        // world y at screen center
+  scale: 1.0   // world units per pixel
+};
+
+const ZOOM_SENSITIVITY = -0.0015;  // tweak to taste
+const MIN_SCALE = 0.01;
+
+// ---------------------------------------------------------------------------
+// WORLD → SCREEN
+// (same structure as your old worldToScreen)
+// ---------------------------------------------------------------------------
+function worldToScreen(wx, wy) {
+  return {
+    x: (wx - cam.x) / cam.scale + canvas.width / 2,
+    y: (wy - cam.y) / cam.scale + canvas.height / 2
+  };
+}
+
+// ---------------------------------------------------------------------------
+// DRAGGING (pan in world space)
+// ---------------------------------------------------------------------------
+let dragging = false;
+let lastX = 0, lastY = 0;
+
+canvas.addEventListener("mousedown", ev => {
+  if (ev.button !== 0) return; // left button
+  dragging = true;
+  lastX = ev.clientX;
+  lastY = ev.clientY;
+});
+
+window.addEventListener("mouseup", () => dragging = false);
+
+window.addEventListener("mousemove", ev => {
+  if (!dragging) return;
+  const dx = ev.clientX - lastX;
+  const dy = ev.clientY - lastY;
+
+  // Move camera in world space
+  cam.x -= dx * cam.scale;
+  cam.y -= dy * cam.scale;
+
+  lastX = ev.clientX;
+  lastY = ev.clientY;
+});
+
+// ---------------------------------------------------------------------------
+// ZOOM (mouse-centered, same logic as your old working code)
+// ---------------------------------------------------------------------------
+canvas.addEventListener("wheel", ev => {
+  ev.preventDefault();
+
+  const oldScale = cam.scale;
+  const zoomFactor = Math.exp(ev.deltaY * ZOOM_SENSITIVITY);
+  let newScale = oldScale * zoomFactor;
+  newScale = Math.max(newScale, MIN_SCALE);
+
+  const cx = ev.clientX;
+  const cy = ev.clientY;
+
+  // Convert mouse to world space BEFORE zoom
+  const wx = (cx - canvas.width  / 2) * oldScale + cam.x;
+  const wy = (cy - canvas.height / 2) * oldScale + cam.y;
+
+  // Apply new scale
+  cam.scale = newScale;
+
+  // Adjust camera so that (wx, wy) stays under the mouse
+  cam.x = wx - (cx - canvas.width  / 2) * newScale;
+  cam.y = wy - (cy - canvas.height / 2) * newScale;
+}, { passive: false });
+
+// ---------------------------------------------------------------------------
+// RENDER LOOP
+// ---------------------------------------------------------------------------
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw axes (world origin)
+  const originScreen = worldToScreen(0, 0);
+  ctx.strokeStyle = "#444";
+  ctx.lineWidth = 1;
+
+  // X-axis
+  ctx.beginPath();
+  ctx.moveTo(0, originScreen.y);
+  ctx.lineTo(canvas.width, originScreen.y);
+  ctx.stroke();
+
+  // Y-axis
+  ctx.beginPath();
+  ctx.moveTo(originScreen.x, 0);
+  ctx.lineTo(originScreen.x, canvas.height);
+  ctx.stroke();
+
+  // Draw a circle at world (0, 0)
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.arc(originScreen.x, originScreen.y, 20 / cam.scale, 0, Math.PI * 2);
+  ctx.fill();
+
+  // HUD
+  ctx.fillStyle = "white";
+  ctx.font = "12px monospace";
+  ctx.textBaseline = "top";
+  ctx.fillText(
+    `cam.x=${cam.x.toFixed(2)}, cam.y=${cam.y.toFixed(2)}, scale=${cam.scale.toExponential(3)}`,
+    10, 10
+  );
+
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>

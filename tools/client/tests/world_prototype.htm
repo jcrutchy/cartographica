@@ -1,0 +1,851 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fog-of-War Island Graph (Multi-Unit AI, Auto Island)</title>
+<style>
+  body { margin:0; overflow:hidden; background:#000; font-family:system-ui, sans-serif; }
+  canvas { display:block; }
+
+  .panel {
+    position:fixed;
+    padding:8px 10px;
+    background:rgba(0,0,0,0.7);
+    color:#ccc;
+    font-size:12px;
+    line-height:1.4;
+    pointer-events:none;
+    border-radius:4px;
+    border:1px solid rgba(255,255,255,0.15);
+    white-space:pre;
+  }
+
+  #uiMain { top:8px; left:8px; }
+  #uiIslandStats { left:8px; bottom:8px; }
+  #uiUnitStats { right:8px; bottom:8px; }
+
+  #islandList {
+    position:fixed;
+    right:8px;
+    top:8px;
+    background:rgba(0,0,0,0.7);
+    color:#ccc;
+    padding:8px;
+    font-size:12px;
+    border-radius:4px;
+    border:1px solid rgba(255,255,255,0.15);
+    max-height:40vh;
+    overflow:auto;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="uiMain" class="panel"></div>
+<div id="uiIslandStats" class="panel"></div>
+<div id="uiUnitStats" class="panel"></div>
+<div id="islandList"></div>
+
+<script>
+(function(){
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const uiMain = document.getElementById("uiMain");
+  const uiIslandStats = document.getElementById("uiIslandStats");
+  const uiUnitStats = document.getElementById("uiUnitStats");
+  const islandList = document.getElementById("islandList");
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---------------------------------------------------------------------------
+  // ISLANDS
+  // ---------------------------------------------------------------------------
+  const islands = {
+    A: { id:"A", margins:{left:0,top:0,right:0,bottom:0}, tileSize:50, tileType:"checker", revealed:new Set() },
+    B: { id:"B", margins:{left:0,top:0,right:0,bottom:0}, tileSize:40, tileType:"noise",   revealed:new Set() },
+    C: { id:"C", margins:{left:0,top:0,right:0,bottom:0}, tileSize:60, tileType:"stripes", revealed:new Set() }
+  };
+
+  // ---------------------------------------------------------------------------
+  // CONNECTION GRAPH
+  // ---------------------------------------------------------------------------
+  const connections = [
+    { from:"A", to:"B", dx:10000, dy:5000 },
+    { from:"A", to:"C", dx:-20000, dy:8000 }
+  ];
+
+  // ---------------------------------------------------------------------------
+  // CAMERA (free-flying)
+  // ---------------------------------------------------------------------------
+  let cam = {
+    islandId: "A",
+    x: 0,
+    y: 0,
+    scale: 5
+  };
+
+  const MIN_SCALE = 1e-4;
+  const ZOOM_SENSITIVITY = 0.0015;
+
+  // ---------------------------------------------------------------------------
+  // UNITS — one per island, with AI state
+  // ---------------------------------------------------------------------------
+  const UNIT_SPEED = 80; // "base" speed; AI uses it scaled by dt
+  let units = [
+    { id:"uA", islandId:"A", x:0, y:0, vision:200, mode:"explore", vx:0, vy:0, aiDirX:0, aiDirY:0, aiRecalcTimer:0 },
+    { id:"uB", islandId:"B", x:0, y:0, vision:200, mode:"explore", vx:0, vy:0, aiDirX:0, aiDirY:0, aiRecalcTimer:0 },
+    { id:"uC", islandId:"C", x:0, y:0, vision:200, mode:"explore", vx:0, vy:0, aiDirX:0, aiDirY:0, aiRecalcTimer:0 }
+  ];
+
+  let selectedUnitIndex = 0;
+  function selectedUnit(){
+    return units[selectedUnitIndex];
+  }
+
+  // ---------------------------------------------------------------------------
+  // MOUSE
+  // ---------------------------------------------------------------------------
+  let mouse = { x:0, y:0, wx:0, wy:0 };
+
+  canvas.addEventListener("mousemove", ev => {
+    mouse.x = ev.clientX;
+    mouse.y = ev.clientY;
+    mouse.wx = (mouse.x - canvas.width/2) * cam.scale + cam.x;
+    mouse.wy = (mouse.y - canvas.height/2) * cam.scale + cam.y;
+  });
+
+canvas.addEventListener("mousedown", ev => {
+  const mx = ev.clientX;
+  const my = ev.clientY;
+
+  // Convert mouse to world space
+  const wx = (mx - canvas.width/2) * cam.scale + cam.x;
+  const wy = (my - canvas.height/2) * cam.scale + cam.y;
+
+  // Find units on the camera's island
+  let best = -1;
+  let bestDist = 999999;
+
+  for (let i = 0; i < units.length; i++){
+    const u = units[i];
+    if (u.islandId !== cam.islandId) continue;
+
+    const dx = u.x - wx;
+    const dy = u.y - wy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < 200 && dist < bestDist){ // 200 world units ≈ 5px at scale 5
+      best = i;
+      bestDist = dist;
+    }
+  }
+
+  if (best !== -1){
+    selectedUnitIndex = best;
+  }
+});
+
+
+  // ---------------------------------------------------------------------------
+  // DRAGGING (pan)
+  // ---------------------------------------------------------------------------
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  canvas.addEventListener("mousedown", ev => {
+    dragging = true;
+    lastX = ev.clientX;
+    lastY = ev.clientY;
+  });
+
+  window.addEventListener("mouseup", () => dragging = false);
+
+  window.addEventListener("mousemove", ev => {
+    if (!dragging) return;
+    const dx = ev.clientX - lastX;
+    const dy = ev.clientY - lastY;
+    cam.x -= dx * cam.scale;
+    cam.y -= dy * cam.scale;
+    lastX = ev.clientX;
+    lastY = ev.clientY;
+  });
+
+  // ---------------------------------------------------------------------------
+  // ZOOM (smooth exponential)
+  // ---------------------------------------------------------------------------
+  canvas.addEventListener("wheel", ev => {
+    const oldScale = cam.scale;
+    const zoomFactor = Math.exp(ev.deltaY * ZOOM_SENSITIVITY);
+    let newScale = oldScale * zoomFactor;
+    newScale = Math.max(newScale, MIN_SCALE);
+
+    const cx = ev.clientX;
+    const cy = ev.clientY;
+
+    const wx = (cx - canvas.width/2) * oldScale + cam.x;
+    const wy = (cy - canvas.height/2) * oldScale + cam.y;
+
+    cam.scale = newScale;
+    cam.x = wx - (cx - canvas.width/2) * newScale;
+    cam.y = wy - (cy - canvas.height/2) * newScale;
+
+    ev.preventDefault();
+  }, { passive:false });
+
+  // ---------------------------------------------------------------------------
+  // KEYBOARD: UNIT MOVEMENT, UNIT SELECTION, MODE TOGGLE, SPAWN ISLAND
+  // ---------------------------------------------------------------------------
+  window.addEventListener("keydown", ev => {
+    const u = selectedUnit();
+    const speed = 80;
+
+    // Manual movement of selected unit
+    let moved = false;
+    if (ev.key === "ArrowUp")    { u.y -= speed; moved = true; }
+    if (ev.key === "ArrowDown")  { u.y += speed; moved = true; }
+    if (ev.key === "ArrowLeft")  { u.x -= speed; moved = true; }
+    if (ev.key === "ArrowRight") { u.x += speed; moved = true; }
+
+    if (moved){
+      u.mode = "manual";
+      u.vx = 0;
+      u.vy = 0;
+      revealAroundUnit(u);
+    }
+
+    // Cycle selected unit
+    if (ev.key === "Tab"){
+      ev.preventDefault();
+      if (units.length > 0){
+        selectedUnitIndex = (selectedUnitIndex + 1) % units.length;
+      }
+    }
+
+    // Toggle AI mode (manual <-> explore, idle -> explore)
+    if (ev.key.toLowerCase() === "e"){
+      if (u.mode === "explore"){
+        u.mode = "manual";
+        u.vx = 0;
+        u.vy = 0;
+      } else {
+        u.mode = "explore";
+        // force direction recalculation
+        u.aiRecalcTimer = 0;
+      }
+    }
+
+    // Spawn new island (with its own exploring unit)
+    if (ev.key.toLowerCase() === "n"){
+      spawnNewIsland();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // SPAWN NEW ISLAND + UNIT
+  // ---------------------------------------------------------------------------
+  function spawnNewIsland(){
+    const newId = "I" + Math.floor(Math.random()*100000);
+
+    const dx = (Math.random()*45000 + 5000) * (Math.random()<0.5 ? -1 : 1);
+    const dy = (Math.random()*45000 + 5000) * (Math.random()<0.5 ? -1 : 1);
+
+    islands[newId] = {
+      id: newId,
+      margins: { left:0, top:0, right:0, bottom:0 },
+      tileSize: 50,
+      tileType: ["checker","noise","stripes"][Math.floor(Math.random()*3)],
+      revealed: new Set()
+    };
+
+    connections.push({
+      from: cam.islandId,
+      to: newId,
+      dx, dy
+    });
+
+    // Add a unit on the new island, starting in explore mode
+    const unitId = "u" + newId;
+    units.push({
+      id: unitId,
+      islandId: newId,
+      x: 0,
+      y: 0,
+      vision: 200,
+      mode: "explore",
+      vx: 0,
+      vy: 0,
+      aiDirX: 0,
+      aiDirY: 0,
+      aiRecalcTimer: 0
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // COMPUTE RELATIVE TRANSFORMS
+  // ---------------------------------------------------------------------------
+  function computeIslandTransforms(anchorId){
+    const transforms = {};
+    transforms[anchorId] = { x:0, y:0 };
+
+    const queue = [anchorId];
+    const visited = new Set([anchorId]);
+
+    while (queue.length){
+      const current = queue.shift();
+      const base = transforms[current];
+
+      for (const conn of connections){
+        if (conn.from === current){
+          const n = conn.to;
+          if (!visited.has(n)){
+            transforms[n] = { x:base.x + conn.dx, y:base.y + conn.dy };
+            visited.add(n);
+            queue.push(n);
+          }
+        } else if (conn.to === current){
+          const n = conn.from;
+          if (!visited.has(n)){
+            transforms[n] = { x:base.x - conn.dx, y:base.y - conn.dy };
+            visited.add(n);
+            queue.push(n);
+          }
+        }
+      }
+    }
+
+    return transforms;
+  }
+
+  // ---------------------------------------------------------------------------
+  // AUTO-SELECT ACTIVE ISLAND (with hysteresis + cooldown)
+  // ---------------------------------------------------------------------------
+  const AUTO_SWITCH_MAX_DIST = 200000;
+  const SWITCH_THRESHOLD = 2000;     // how much closer the new island must be
+  const SWITCH_COOLDOWN = 300;      // ms between switches
+  let lastSwitchTime = 0;
+
+  function autoSelectActiveIsland(transforms){
+    const now = performance.now();
+    if (now - lastSwitchTime < SWITCH_COOLDOWN) return transforms;
+
+    let bestId = cam.islandId;
+    let bestDist = Infinity;
+
+    const cx = cam.x;
+    const cy = cam.y;
+
+    /*for (const id in transforms){
+      const t = transforms[id];
+      const dx = t.x - cx;
+      const dy = t.y - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < bestDist){
+        bestDist = dist;
+        bestId = id;
+      }
+    }*/
+for (const id in transforms){
+  const t = transforms[id];
+  const isl = islands[id];
+
+  const cxIsl = t.x + (isl.margins.left + isl.margins.right) / 2;
+  const cyIsl = t.y + (isl.margins.top + isl.margins.bottom) / 2;
+
+  const dx = cxIsl - cx;
+  const dy = cyIsl - cy;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  if (dist < bestDist){
+    bestDist = dist;
+    bestId = id;
+  }
+}
+
+
+    // distance from camera to current island origin
+    /*const currentDist = (() => {
+      const t = transforms[cam.islandId];
+      if (!t) return Infinity;
+      const dx = t.x - cx;
+      const dy = t.y - cy;
+      return Math.sqrt(dx*dx + dy*dy);
+    })();*/
+
+const currentIsl = islands[cam.islandId];
+const tCur = transforms[cam.islandId];
+
+const cxCur = tCur.x + (currentIsl.margins.left + currentIsl.margins.right) / 2;
+const cyCur = tCur.y + (currentIsl.margins.top + currentIsl.margins.bottom) / 2;
+
+const dxCur = cxCur - cx;
+const dyCur = cyCur - cy;
+const currentDist = Math.sqrt(dxCur*dxCur + dyCur*dyCur);
+
+
+    if (
+      bestId !== cam.islandId &&
+      bestDist < currentDist - SWITCH_THRESHOLD &&
+      bestDist < AUTO_SWITCH_MAX_DIST
+    ){
+      lastSwitchTime = now;
+
+      // Switch camera island
+      switchCameraIsland(bestId, transforms);
+
+      // Recompute transforms immediately to avoid flicker
+      return computeIslandTransforms(cam.islandId);
+    }
+
+    return transforms;
+  }
+
+  function switchCameraIsland(newId, transforms){
+    const t = transforms[newId];
+    if (!t) return;
+
+    const wxOld = cam.x;
+    const wyOld = cam.y;
+
+    const wxNew = wxOld - t.x;
+    const wyNew = wyOld - t.y;
+
+    cam.islandId = newId;
+    cam.x = wxNew;
+    cam.y = wyNew;
+  }
+
+  // ---------------------------------------------------------------------------
+  // FOG-OF-WAR: REVEAL TILES AROUND UNIT
+  // ---------------------------------------------------------------------------
+  function revealAroundUnit(unit){
+    const island = islands[unit.islandId];
+    const tileSize = island.tileSize;
+
+    const minX = Math.floor((unit.x - unit.vision) / tileSize);
+    const maxX = Math.floor((unit.x + unit.vision) / tileSize);
+    const minY = Math.floor((unit.y - unit.vision) / tileSize);
+    const maxY = Math.floor((unit.y + unit.vision) / tileSize);
+
+    for (let ty = minY; ty <= maxY; ty++){
+      for (let tx = minX; tx <= maxX; tx++){
+        const key = tx + "," + ty;
+        if (!island.revealed.has(key)){
+          island.revealed.add(key);
+
+          const wx = tx * tileSize;
+          const wy = ty * tileSize;
+
+          if (wx < island.margins.left) island.margins.left = wx;
+          if (wx + tileSize > island.margins.right) island.margins.right = wx + tileSize;
+          if (wy < island.margins.top) island.margins.top = wy;
+          if (wy + tileSize > island.margins.bottom) island.margins.bottom = wy + tileSize;
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // WORLD → SCREEN
+  // ---------------------------------------------------------------------------
+  function worldToScreen(wx, wy){
+    return {
+      x: (wx - cam.x) / cam.scale + canvas.width/2,
+      y: (wy - cam.y) / cam.scale + canvas.height/2
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // VIEWPORT BOUNDS
+  // ---------------------------------------------------------------------------
+  function getViewportWorldBounds(){
+    const s = cam.scale;
+    const halfW = canvas.width * s / 2;
+    const halfH = canvas.height * s / 2;
+
+    return {
+      left: cam.x - halfW,
+      right: cam.x + halfW,
+      top: cam.y - halfH,
+      bottom: cam.y + halfH
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // AI: FIND DIRECTION TOWARD FOG (SMOOTH WANDERING)
+  // ---------------------------------------------------------------------------
+  function findExploreDirection(unit){
+    const island = islands[unit.islandId];
+    if (!island) return null;
+
+    const tileSize = island.tileSize;
+    const samples = 16;
+    const maxDist = unit.vision * 3;
+    const steps = 8;
+
+    let bestDir = null;
+    let bestScore = 0;
+
+    for (let i = 0; i < samples; i++){
+      const baseAngle = (Math.PI * 2 * i / samples);
+      const angle = baseAngle + (Math.random()*0.4 - 0.2); // some jitter
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+
+      let score = 0;
+
+      for (let s = 1; s <= steps; s++){
+        const dist = maxDist * (s / steps);
+        const px = unit.x + dirX * dist;
+        const py = unit.y + dirY * dist;
+
+        const tx = Math.floor(px / tileSize);
+        const ty = Math.floor(py / tileSize);
+        const key = tx + "," + ty;
+
+        if (!island.revealed.has(key)){
+          score++;
+        }
+      }
+
+      if (score > bestScore){
+        bestScore = score;
+        bestDir = { x: dirX, y: dirY };
+      }
+    }
+
+    if (bestScore <= 0){
+      return null;
+    }
+
+    return bestDir;
+  }
+
+  function normalize(x, y){
+    const len = Math.sqrt(x*x + y*y) || 1;
+    return { x: x/len, y: y/len };
+  }
+
+  // ---------------------------------------------------------------------------
+  // UPDATE UNITS AI (CALLED EACH FRAME)
+  // ---------------------------------------------------------------------------
+  function updateUnitsAI(dt){
+    const dtSec = dt / 1000;
+
+    for (const u of units){
+      if (u.mode !== "explore") continue;
+
+      // Recalculate direction periodically or if we have almost no velocity
+      u.aiRecalcTimer -= dt;
+      const speedSq = u.vx*u.vx + u.vy*u.vy;
+
+      if (u.aiRecalcTimer <= 0 || speedSq < 1){
+        const dir = findExploreDirection(u);
+        if (!dir){
+          // No more fog in reach -> idle
+          u.mode = "idle";
+          u.vx = 0;
+          u.vy = 0;
+          continue;
+        }
+        const n = normalize(dir.x, dir.y);
+        u.aiDirX = n.x;
+        u.aiDirY = n.y;
+        u.aiRecalcTimer = 800 + Math.random()*800; // ms
+      }
+
+      // Add gentle wandering jitter
+      const jitter = 0.15;
+      u.aiDirX += (Math.random()-0.5) * jitter;
+      u.aiDirY += (Math.random()-0.5) * jitter;
+      const n2 = normalize(u.aiDirX, u.aiDirY);
+      u.aiDirX = n2.x;
+      u.aiDirY = n2.y;
+
+      // Smooth velocity towards target direction
+      const targetVx = u.aiDirX * UNIT_SPEED;
+      const targetVy = u.aiDirY * UNIT_SPEED;
+      const lerpFactor = 0.1;
+
+      u.vx += (targetVx - u.vx) * lerpFactor;
+      u.vy += (targetVy - u.vy) * lerpFactor;
+
+      // Move
+      u.x += u.vx * dtSec;
+      u.y += u.vy * dtSec;
+
+      // Reveal as we move
+      revealAroundUnit(u);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAW TILEMAP
+  // ---------------------------------------------------------------------------
+  function drawIslandTiles(island, transform, viewport){
+    const tileSize = island.tileSize;
+    const m = island.margins;
+
+    const left   = transform.x + m.left;
+    const right  = transform.x + m.right;
+    const top    = transform.y + m.top;
+    const bottom = transform.y + m.bottom;
+
+    if (right < viewport.left || left > viewport.right ||
+        bottom < viewport.top || top > viewport.bottom){
+      return;
+    }
+
+    const startX = Math.floor(left  / tileSize) * tileSize;
+    const endX   = Math.ceil (right / tileSize) * tileSize;
+    const startY = Math.floor(top   / tileSize) * tileSize;
+    const endY   = Math.ceil (bottom/ tileSize) * tileSize;
+
+    for (let y = startY; y < endY; y += tileSize){
+      for (let x = startX; x < endX; x += tileSize){
+        const tx = Math.floor(x / tileSize);
+        const ty = Math.floor(y / tileSize);
+        const key = tx + "," + ty;
+
+        if (!island.revealed.has(key)) continue;
+
+        let color = "rgba(255,255,255,0.15)";
+
+        if (island.tileType === "checker"){
+          const c = ((tx + ty) & 1);
+          color = c ? "rgba(0,180,255,0.25)" : "rgba(0,180,255,0.10)";
+        }
+
+        if (island.tileType === "noise"){
+          const n = Math.abs(Math.sin(x*0.01 + y*0.02));
+          color = `rgba(0,255,100,${0.1 + n*0.15})`;
+        }
+
+        if (island.tileType === "stripes"){
+          const s = (tx & 1);
+          color = s ? "rgba(200,0,255,0.25)" : "rgba(200,0,255,0.10)";
+        }
+
+        const p = worldToScreen(x, y);
+        const w = tileSize / cam.scale;
+        const h = tileSize / cam.scale;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(p.x, p.y, w, h);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAW ISLAND BOUNDS
+  // ---------------------------------------------------------------------------
+  function drawIslandBounds(island, transform, viewport){
+    const m = island.margins;
+    const left   = transform.x + m.left;
+    const right  = transform.x + m.right;
+    const top    = transform.y + m.top;
+    const bottom = transform.y + m.bottom;
+
+    if (right < viewport.left || left > viewport.right ||
+        bottom < viewport.top || top > viewport.bottom){
+      return;
+    }
+
+    const tl = worldToScreen(left, top);
+    const br = worldToScreen(right, bottom);
+
+    ctx.strokeStyle = island.id === cam.islandId ? "rgba(0,200,255,0.9)" : "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.font = "12px system-ui";
+    ctx.fillText(`Island ${island.id}`, tl.x + 4, tl.y + 14);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAW CONNECTIONS
+  // ---------------------------------------------------------------------------
+  function drawConnections(transforms){
+    ctx.strokeStyle = "rgba(255,255,0,0.5)";
+    ctx.lineWidth = 1.5;
+
+    for (const conn of connections){
+      const a = transforms[conn.from];
+      const b = transforms[conn.to];
+      if (!a || !b) continue;
+
+      const p1 = worldToScreen(a.x, a.y);
+      const p2 = worldToScreen(b.x, b.y);
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAW UNITS
+  // ---------------------------------------------------------------------------
+  function drawUnits(){
+    for (let i = 0; i < units.length; i++){
+      const u = units[i];
+      if (u.islandId !== cam.islandId) continue;
+
+      const p = worldToScreen(u.x, u.y);
+
+      // Vision radius
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, u.vision / cam.scale, 0, Math.PI*2);
+      ctx.stroke();
+
+      // Unit marker
+      ctx.fillStyle = (i === selectedUnitIndex) ? "rgba(255,255,0,0.95)" : "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // UPDATE ISLAND LIST (click-to-focus)
+  // ---------------------------------------------------------------------------
+  function updateIslandList(transforms){
+    islandList.innerHTML = "";
+    const cx = cam.x;
+    const cy = cam.y;
+
+    for (const id in islands){
+      const div = document.createElement("div");
+      const t = transforms[id] || { x:Infinity, y:Infinity };
+      const dx = t.x - cx;
+      const dy = t.y - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      const unitOnIsland = units.find(u => u.islandId === id);
+      const unitTag = unitOnIsland ? ` (unit: ${unitOnIsland.id})` : "";
+
+      div.textContent = `${id}  dist=${isFinite(dist) ? dist.toFixed(0) : "∞"}${unitTag}`;
+      div.style.cursor = "pointer";
+      div.style.padding = "2px 4px";
+      div.style.color = id === cam.islandId ? "#0cf" : "#ccc";
+
+      div.onclick = () => {
+        const currentTransforms = computeIslandTransforms(cam.islandId);
+        switchCameraIsland(id, currentTransforms);
+      };
+
+      islandList.appendChild(div);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // RENDER LOOP
+  // ---------------------------------------------------------------------------
+  let lastTime = performance.now();
+
+  function render(now){
+    const dt = now - lastTime;
+    lastTime = now;
+
+    // Update AI before drawing
+    updateUnitsAI(dt);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    let transforms = computeIslandTransforms(cam.islandId);
+    const viewport = getViewportWorldBounds();
+
+    // Auto-select active island (smoothed, with flicker-free recompute)
+    transforms = autoSelectActiveIsland(transforms);
+
+    // Draw world
+    drawConnections(transforms);
+
+    for (const id in transforms){
+      drawIslandTiles(islands[id], transforms[id], viewport);
+    }
+
+    for (const id in transforms){
+      drawIslandBounds(islands[id], transforms[id], viewport);
+    }
+
+    drawUnits();
+
+    // UI: main
+    uiMain.textContent =
+      `Camera island: ${cam.islandId}
+Camera local: (${cam.x.toFixed(1)}, ${cam.y.toFixed(1)})
+Scale (world units per px): ${cam.scale.toExponential(3)}
+Mouse world: (${mouse.wx.toFixed(1)}, ${mouse.wy.toFixed(1)})
+Islands: ${Object.keys(islands).length}
+Units: ${units.length}
+Connections: ${connections.length}
+Controls:
+  drag = pan, wheel = zoom
+  Arrow keys = move selected unit (manual)
+  Tab = cycle units
+  E = toggle AI (manual/explore)
+  N = spawn island + unit`;
+
+    // UI: island stats (for camera island)
+    const activeIsland = islands[cam.islandId];
+    const revealedCount = activeIsland.revealed.size;
+    const worldWidth = activeIsland.margins.right - activeIsland.margins.left;
+    const worldHeight = activeIsland.margins.bottom - activeIsland.margins.top;
+
+    uiIslandStats.textContent =
+      `Island ${cam.islandId} stats
+Revealed tiles: ${revealedCount}
+World extents:
+  width:  ${worldWidth.toFixed(1)}
+  height: ${worldHeight.toFixed(1)}
+Margins:
+  left:   ${activeIsland.margins.left.toFixed(1)}
+  right:  ${activeIsland.margins.right.toFixed(1)}
+  top:    ${activeIsland.margins.top.toFixed(1)}
+  bottom: ${activeIsland.margins.bottom.toFixed(1)}`;
+
+    // UI: unit stats (selected unit)
+    const su = selectedUnit();
+    const dxCam = su.islandId === cam.islandId ? (su.x - cam.x) : NaN;
+    const dyCam = su.islandId === cam.islandId ? (su.y - cam.y) : NaN;
+    const distCam = isNaN(dxCam) ? "n/a" : Math.sqrt(dxCam*dxCam + dyCam*dyCam).toFixed(1);
+
+    uiUnitStats.textContent =
+      `Selected unit: ${su.id}
+Island: ${su.islandId}
+Mode: ${su.mode}
+Position (local): (${su.x.toFixed(1)}, ${su.y.toFixed(1)})
+Velocity: (${su.vx.toFixed(1)}, ${su.vy.toFixed(1)})
+AI dir: (${su.aiDirX.toFixed(2)}, ${su.aiDirY.toFixed(2)})
+Vision radius: ${su.vision.toFixed(1)}
+Distance to camera center: ${distCam}`;
+
+    updateIslandList(transforms);
+
+    requestAnimationFrame(render);
+  }
+
+  // Initial reveal for all starting units
+  for (const u of units){
+    revealAroundUnit(u);
+  }
+
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

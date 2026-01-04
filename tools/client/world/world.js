@@ -1,7 +1,11 @@
+import { Camera } from "./camera.js";
+import { Renderer } from "./renderer.js";
+
 export class World {
-    constructor(tilemap, players) {
-        this.tilemap = tilemap;
-        this.players = players;
+    constructor(worldData, connection) {
+        this.islands = worldData.islands;
+        this.players = worldData.players;
+        this.connection = connection;
 
         this.canvas = document.getElementById("worldCanvas");
         if (!this.canvas) {
@@ -14,6 +18,8 @@ export class World {
 
         this.camera = new Camera(this.canvas);
         this.renderer = new Renderer(this.canvas, this.camera);
+
+        this.autoFollow = true;
 
         window.addEventListener("resize", () => this.resizeCanvas());
     }
@@ -30,14 +36,21 @@ export class World {
 
     loop() {
         this.update();
-        this.renderer.render(this.tilemap, this.players);
+        this.renderer.render(this);
         requestAnimationFrame(() => this.loop());
     }
 
     update() {
-        const me = Object.values(this.players)[0];
-        if (me) {
-            this.camera.centerOn(me.x, me.y);
+        if (this.autoFollow) {
+            const me = Object.values(this.players)[0];
+            if (me) {
+                const island = this.islands.find(i => i.id === me.islandId);
+                if (island) {
+                    const wx = island.originX + me.x * 32;
+                    const wy = island.originY + me.y * 32;
+                    this.camera.centerOn(wx, wy);
+                }
+            }
         }
     }
 
@@ -49,20 +62,17 @@ export class World {
     }
 
     bindInput() {
+        this.canvas.addEventListener("mousedown", () => {
+            this.autoFollow = false;
+        });
+
+        this.canvas.addEventListener("wheel", () => {
+            this.autoFollow = false;
+        }, { passive: false });
+
         window.addEventListener("keydown", (e) => {
-            let dx = 0, dy = 0;
-
-            if (e.key === "ArrowUp" || e.key === "w") dy = -1;
-            if (e.key === "ArrowDown" || e.key === "s") dy = 1;
-            if (e.key === "ArrowLeft" || e.key === "a") dx = -1;
-            if (e.key === "ArrowRight" || e.key === "d") dx = 1;
-
-            if (dx !== 0 || dy !== 0) {
-                ws.send(JSON.stringify({
-                    type: "MOVE",
-                    dx,
-                    dy
-                }));
+            if (e.key === "f") {
+                this.autoFollow = true;
             }
         });
     }

@@ -21,13 +21,15 @@ Logger::info(), Logger::warn(), Logger::error()
 
 namespace cartographica\share;
 
+use cartographica\share\Utils;
+
 class Logger {
     private static string $file;
     private static bool $console = true;
 
     public static function init(string $file): void {
         self::$file = $file;
-        self::$console = \cartographica\share\is_cli_mode();
+        self::$console = Utils::isCliMode();
     }
 
     public static function info(string $msg): void {

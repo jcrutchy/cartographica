@@ -1,0 +1,22 @@
+body {
+  font-family: sans-serif;
+  margin: 20px;
+}
+
+table {
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+}
+
+.status-running { color: green; }
+.status-stopped { color: gray; }
+.status-crashed { color: red; }
+
+button {
+  margin: 0 2px;
+}

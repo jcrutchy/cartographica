@@ -6,6 +6,12 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../share/Env.php';
+
+$DATA_PATH = Env::serviceData('cluster');
+$CONFIG_PATH = $DATA_PATH . '/config.json';
+
+
 $DATA_PATH = realpath(__DIR__ . '/../../cartographica_data/services/cluster');
 if (!$DATA_PATH) {
     echo "ERROR: Could not locate cartographica_data/services/cluster\n";

@@ -1,57 +1,71 @@
 export class Camera {
     constructor(canvas) {
-        this.x = 0;
-        this.y = 0;
-        this.zoom = 1;
+        this.x = 0;        // world coordinate at screen center
+        this.y = 0;        // world coordinate at screen center
+        this.scale = 1.0;  // world units per pixel
 
         this.dragging = false;
-        this.lastMouse = { x: 0, y: 0 };
+        this.lastX = 0;
+        this.lastY = 0;
 
-        // Mouse drag panning
+        this.MIN_SCALE = 0.01;
+        this.ZOOM_SENSITIVITY = -0.0015;
+
+        // -----------------------------
+        // DRAG PANNING (world space)
+        // -----------------------------
         canvas.addEventListener("mousedown", e => {
+            if (e.button !== 0) return;
             this.dragging = true;
-            this.lastMouse = { x: e.clientX, y: e.clientY };
+            this.lastX = e.clientX;
+            this.lastY = e.clientY;
         });
 
-        canvas.addEventListener("mouseup", () => this.dragging = false);
-        canvas.addEventListener("mouseleave", () => this.dragging = false);
+        window.addEventListener("mouseup", () => this.dragging = false);
 
-        canvas.addEventListener("mousemove", e => {
-            if (this.dragging) {
-                this.x -= (e.clientX - this.lastMouse.x);
-                this.y -= (e.clientY - this.lastMouse.y);
-                this.lastMouse = { x: e.clientX, y: e.clientY };
-            }
+        window.addEventListener("mousemove", e => {
+            if (!this.dragging) return;
+
+            const dx = e.clientX - this.lastX;
+            const dy = e.clientY - this.lastY;
+
+            this.x -= dx * this.scale;
+            this.y -= dy * this.scale;
+
+            this.lastX = e.clientX;
+            this.lastY = e.clientY;
         });
 
-        // Scroll wheel zoom
+        // -----------------------------
+        // CAD-STYLE MOUSE-CENTRED ZOOM
+        // -----------------------------
         canvas.addEventListener("wheel", e => {
-            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-            this.zoom *= zoomFactor;
-            this.zoom = Math.max(0.01, Math.min(1000, this.zoom));
-        });
+            e.preventDefault();
 
-        // Keyboard panning
-        window.addEventListener("keydown", e => {
-            const speed = 50 / this.zoom;
-            if (e.key === "ArrowUp" || e.key === "w") this.y -= speed;
-            if (e.key === "ArrowDown" || e.key === "s") this.y += speed;
-            if (e.key === "ArrowLeft" || e.key === "a") this.x -= speed;
-            if (e.key === "ArrowRight" || e.key === "d") this.x += speed;
+            this.dragging = false;
 
-            // Reset camera
-            if (e.key === "0") {
-                this.x = 0;
-                this.y = 0;
-                this.zoom = 1;
-            }
-        });
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const oldScale = this.scale;
+            const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY);
+            let newScale = oldScale * zoomFactor;
+            newScale = Math.max(newScale, this.MIN_SCALE);
+
+            const wx = (mx - canvas.width / 2) * oldScale + this.x;
+            const wy = (my - canvas.height / 2) * oldScale + this.y;
+
+            this.scale = newScale;
+
+            this.x = wx - (mx - canvas.width / 2) * newScale;
+            this.y = wy - (my - canvas.height / 2) * newScale;
+        }, { passive: false });
     }
 
-    // NEW: Center camera on a world coordinate
+    // Center camera on a world coordinate (tile coords or world coords)
     centerOn(wx, wy) {
-        const tileSize = 32;
-        this.x = wx * tileSize * this.zoom - window.innerWidth / 2;
-        this.y = wy * tileSize * this.zoom - window.innerHeight / 2;
+        this.x = wx;
+        this.y = wy;
     }
 }

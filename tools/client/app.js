@@ -1,4 +1,4 @@
-//import { initWorld } from "./world/world.js";
+import { World } from "./world/world.js";
 
 import { Identity } from "./ui/identity.js";
 import { UIState, setUIState } from "./ui/state.js";

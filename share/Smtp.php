@@ -25,6 +25,7 @@ $mailer->send("no-reply@cartographica.com",$email,"Login link","<p>Click here to
 namespace cartographica\share;
 
 use cartographica\share\SharedConfig;
+use cartographica\share\Env;
 use Exception;
 
 class Smtp
@@ -39,7 +40,7 @@ class Smtp
     public function __construct() {
         $this->host=SharedConfig::get("smtp_host");
         $this->port=SharedConfig::get("smtp_port");
-        $this->cafile=CARTOGRAPHICA_DATA_DIR.SharedConfig::get("cacert_file_relative");
+        $this->cafile=Env::dataRoot().SharedConfig::get("cacert_file_relative");
         $this->loadCredentials();
     }
 
@@ -48,7 +49,7 @@ class Smtp
     // ------------------------------------------------------------
     private function loadCredentials(): void
     {
-        $path=CARTOGRAPHICA_DATA_DIR.SharedConfig::get("smtp_creds_file_relative");
+        $path=Env::dataRoot().SharedConfig::get("smtp_creds_file_relative");
         if (!file_exists($path)) {
             throw new Exception("SMTP credential file not found: $path");
         }

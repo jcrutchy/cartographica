@@ -3,6 +3,19 @@ import { Atlas } from "../net/atlas.js";
 import { IslandConnection } from "../net/websocket.js";
 import { UIState, setUIState } from "./state.js";
 import { showError, clearError } from "../error.js";
+import { World } from "../world/world.js";
+
+let world = null;
+
+function startWorld(worldData, connection) {
+    console.log("Starting world...");
+
+    const root = document.getElementById("menu-root");
+    root.innerHTML = "";
+
+    world = new World(worldData, connection);
+    world.start();
+}
 
 export function showMainUI() {
     const currentNetwork = localStorage.getItem("cartographica_selected_network");
@@ -146,7 +159,28 @@ async function startGame(selected_network) {
         url = "ws://" + url;
     }
 
-    const conn=new IslandConnection(identity,url);
+    const conn = new IslandConnection(identity, url, {
+        onWorld: (msg) => {
+            startWorld({
+                islands: [
+                    {
+                        id: msg.island_id || "island_01",
+                        originX: 0,
+                        originY: 0,
+                        tilemap: msg.tilemap
+                    }
+                ],
+                players: msg.players
+            }, conn);
+        },
+    
+        onPlayerMoved: (msg) => {
+            if (world) {
+                world.updatePlayer(msg);
+            }
+        }
+    });
+
     try {
         await conn.connect();
     } catch (err) {
@@ -154,50 +188,3 @@ async function startGame(selected_network) {
         return;
     }
 }
-
-// ------------------------------------------------------------
-// Basic world view (placeholder)
-// ------------------------------------------------------------
-function showWorldUI(tiles, player, networkId, nodeId) {
-    const root = document.getElementById("menu-root");
-
-    let html = `<div class="menu-panel">
-        <div class="menu-title">World View</div>
-        <div class="menu-subtitle">Network: ${networkId} | Node: ${nodeId}</div>
-        <pre>Player: ${player.player_id}\n\n`;
-
-    for (let row of tiles) {
-        html += row.join(" ") + "\n";
-    }
-
-    html += `</pre>
-        <button class="menu-button" id="btn-back-main">Back to Main Menu</button>
-    </div>`;
-
-    root.innerHTML = html;
-
-    document.getElementById("btn-back-main").onclick = () => {
-        showMainMenu(networkId);
-    };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
