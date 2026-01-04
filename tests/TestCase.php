@@ -95,7 +95,7 @@ abstract class TestCase
     $this->basic_test("assertStrictNotEquals",$ok,$message,$context ?: ["expected"=>$expected, "actual"=>$actual]);
   }
 
-  public function assertArrayHasKey(string $key, $array, string $message="", $context=[]): void
+  public function assertArrayHasKey(string $key, $array, string $message="", $context=[]): bool
   {
     if (empty($message))
     {
@@ -103,6 +103,7 @@ abstract class TestCase
     }
     $ok=array_key_exists($key,$array ?? []);
     $this->basic_test("assertArrayHasKey",$ok,$message,$context ?: $array);
+    return $ok;
   }
 
   public function assertArrayNotHasKey(string $key, $array, string $message="", $context=[]): void
@@ -205,7 +206,7 @@ abstract class TestCase
     $this->basic_test("assertNull",$ok,$message,$context ?: ["value"=>$actual]);
   }
 
-  public function assertJson($raw, string $message="", $context=[]): void
+  public function assertJson($raw, string $message="", $context=[])
   {
     if (empty($message))
     {

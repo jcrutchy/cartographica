@@ -3,10 +3,28 @@
 namespace cartographica\services\identity;
 
 use cartographica\share\SharedConfig;
+use cartographica\share\Db;
+use PDO;
 
 class Config extends SharedConfig
 {
   private const BASE=CARTOGRAPHICA_DATA_DIR."/services/identity";
+  private PDO $pdo;
+
+  function __construct()
+  {
+    $this->pdo=Db::connect($this->sqlitePath(),__DIR__."/schema.sql");
+  }
+
+  public function validator(): IdentityValidator
+  {
+    return new IdentityValidator();
+  }
+
+  public function pdo(): PDO
+  {
+    return $this->pdo;
+  }
 
   public function privateKey(): string
   {
@@ -30,6 +48,7 @@ class Config extends SharedConfig
 
   public static function loginLinkBase(): string
   {
-    return self::get("web_root")."/client?token=";
+    # TODO: need to get webroot from request to be able to handle different clients?
+    return self::get("web_root")."/tools/client?token=";
   }
 }

@@ -10,7 +10,7 @@ Assign top level global configuration constants.
 
 */
 
-require __DIR__."/utils.php";
+require __DIR__."/Utils.php";
 
 $data_dir=dirname(__DIR__)."_data";
 if ((isset($_GET["test"])==true) and ($_SERVER["REMOTE_ADDR"]=="::1"))

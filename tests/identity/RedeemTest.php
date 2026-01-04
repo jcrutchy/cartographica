@@ -12,40 +12,46 @@ class RedeemTest extends TestCase
   {
     $config=new Config();
     $email=$config->get("admin_email");
-    $player_id=Certificate::random_id(16);
-    $email_token_id=Certificate::random_id(16);
-    $extra=["email"=>$email,"player_id"=>$player_id,"email_token_id"=>$email_token_id];
+
+    // Issue a valid email token
+    $extra = [
+      "email"=> $email,
+      "player_id"=>Certificate::random_id(16),
+      "email_token_id"=>Certificate::random_id(16)
+    ];
     $expiry=600; # 10 minutes
     $issued=Certificate::issue($config,$extra,$expiry,"email_token");
-
-    $this->assertTrue($issued["valid"],"valid issued email token",[$issued]);
+    $this->assertTrue($issued["valid"],"email token should be valid",$issued);
 
     unset($issued["valid"]);
     $email_token_json=json_encode($issued);
 
+    // Redeem it
     $url=$config->get("web_root")."/services/identity/index.php?action=redeem";
     $response_raw=$this->post($url,["email_token"=>$email_token_json]);
 
-    $response=json_decode($response_raw,true);
+    // Validate JSON + structure
+    $response=$this->assertJson($response_raw);
+    $this->assertStatusOK($response);
 
-    $this->assertNotNull($response,"valid json response",$response_raw);
-    $this->assertIsArray($response,"decoded json response is array",$response_raw);
+    // Validate session_token exists and is non-empty
+    $this->assertArrayHasKey("session_token",$response);
+    $this->assertNotEmpty($response["session_token"]);
 
-    $this->assertStatusOK($response,"",$response);
+    // Decode session token
+    $token = $this->assertJson($response["session_token"]);
 
-    $this->assertArrayHasKey("session_token",$response,"session_token field found",$response);
-    $this->assertNotEmpty($response["session_token"],"session_token is not empty",$response);
+    // Validate token structure
+    $this->assertArrayHasKey("payload",$token);
+    $this->assertArrayHasKey("signature",$token);
 
-    $token=json_decode($response["session_token"],true);
-    
-    $this->assertNotNull($token,"session_token is valid json",$response["session_token"]);
-    $this->assertArrayHasKey("payload",$token,"session_token contains payload",$token);
-    $this->assertArrayHasKey("signature",$token,"session_token contains signature",$token);
+    // Validate payload fields
+    $payload = $token["payload"];
+    $this->assertEquals("session_token",$payload["type"] ?? null);
+    $this->assertEquals($email,$payload["email"] ?? null);
 
-    $this->assertEquals("session_token",$token["payload"]["type"] ?? null,"session_token payload type is session_token",$token);
-    $this->assertEquals($email,$token["payload"]["email"] ?? null,"session_token payload email matches issued email",$token);
-
+    // Validate signature
     $verified=Certificate::verify($config,$response["session_token"]);
-    $this->assertTrue($verified["valid"],"session_token signature successfully verified",$verified);
+    $this->assertTrue($verified["valid"],"session_token signature should verify",$verified);
   }
 }

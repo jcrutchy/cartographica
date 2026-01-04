@@ -16,6 +16,8 @@ namespace cartographica\share;
 
 use cartographica\share\SharedConfig;
 
+# TODO: consider moving the certificate validation into a new BaseValidator::validateCertificate
+
 class Certificate
 {
 

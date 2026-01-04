@@ -3,7 +3,6 @@
 namespace cartographica\tests\identity;
 
 use cartographica\tests\TestCase;
-use cartographica\share\Certificate;
 use cartographica\services\identity\Config;
 
 class RedeemNegativeTest extends TestCase
@@ -17,18 +16,14 @@ class RedeemNegativeTest extends TestCase
     $url=$config->get("web_root")."/services/identity/index.php?action=redeem";
     $response_raw=$this->post($url,["email_token"=>$invalid_token]);
 
-    $response=json_decode($response_raw,true);
+    // Parse JSON and assert it's valid
+    $response=$this->assertJson($response_raw);
 
-    // Basic JSON validity
-    #$this->assertNotNull($response,"Redeem returned invalid JSON",$response_raw);
-    #$this->assertIsArray($response,"Redeem response should be an array",$response_raw);
+    // Must be ok:false
+    $this->assertStatusError($response);
 
-    // Should NOT be ok:true
-    #$this->assertArrayHasKey("ok",$response,"Response missing 'ok' field",$response);
-    $this->assertFalse($response["ok"],"Redeem should fail for invalid token",$response);
-
-    // Should contain an error message
-    $this->assertArrayHasKey("error",$response,"Redeem error response missing 'error' field",$response);
-    $this->assertNotEmpty($response["error"],"Redeem error message should not be empty",$response);
+    // Must contain an error message
+    $this->assertArrayHasKey("error",$response);
+    $this->assertNotEmpty($response["error"]);
   }
 }

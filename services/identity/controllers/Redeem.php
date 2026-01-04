@@ -8,6 +8,7 @@ use cartographica\share\Logger;
 use cartographica\share\Request;
 use cartographica\share\Response;
 use cartographica\services\identity\Config;
+use PDO;
 
 class Redeem
 {
@@ -20,12 +21,15 @@ class Redeem
 
   public function handle(): void
   {
+    $config=new Config();
+    $pdo=$config->pdo();
+    $validator=$config->validator();
+
     $tokenJson=$this->req->post("email_token");
     if (!$tokenJson)
     {
       Response::error("Missing email token.");
     }
-    $config=new Config();
     $result=Certificate::verify($config,$tokenJson);
     if ($result["valid"]==false)
     {
@@ -36,11 +40,15 @@ class Redeem
     {
       Response::error("Invalid token type.");
     }
-    if (!isset($payload["email"]))
+
+    $validation=$validator->validateRedeemPayload($payload);
+    if (!$validation["valid"])
     {
-      Response::error("Email token missing email field.");
+      Response::error($validation["payload"]);
     }
-    $email=$payload["email"];
+    $clean=$validation["payload"];
+    $email=$clean["email"];
+
     if (!isset($payload["player_id"]))
     {
       Response::error("Email token missing player_id field.");
@@ -49,6 +57,7 @@ class Redeem
     {
       Response::error("Email token missing email_token_id field.");
     }
+
     $player_id=$payload["player_id"];
     $session_id=Certificate::random_id(32);
     $extra=["email"=>$email,"session_id"=>$session_id,"player_id"=>$player_id];
@@ -60,10 +69,11 @@ class Redeem
     }
     $payload=$result["payload"];
     unset($result["valid"]);
+
     $session_token=json_encode($result);
-    $pdo=Db::connect($config->sqlitePath(),__DIR__."/../schema.sql");
     $stmt=$pdo->prepare("INSERT INTO session_tokens (email,issued_at,expires_at,player_id,session_token) VALUES (:email,:issued_at,:expires_at,:player_id,:session_token)");
     $stmt->execute([":email"=>$email,":issued_at"=>$payload["issued_at"],":expires_at"=>$payload["expires_at"],":player_id"=>$payload["player_id"],":session_token"=>$session_token]);
+
     Logger::info("Session token issued for $email");
     Response::success(["session_token"=>$session_token]);
   }

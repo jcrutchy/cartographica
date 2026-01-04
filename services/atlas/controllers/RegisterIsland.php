@@ -15,11 +15,15 @@ class RegisterIsland
 
   public function __construct(Request $req)
   {
-    $this->req = $req;
+    $this->req=$req;
   }
 
   public function handle(): void
   {
+    $config=new Config();
+    $pdo=$config->pdo();
+    $validator=$config->validator($pdo);
+
     $island_name=$this->req->post("island_name");
     $owner_email=$this->req->post("owner_email");
     $public_key=$this->req->post("public_key");
@@ -29,60 +33,18 @@ class RegisterIsland
       Response::error("Missing required fields: island_name, owner_email, public_key");
     }
 
-    $owner_email=strtolower(trim($owner_email));
-    if (!filter_var($owner_email,FILTER_VALIDATE_EMAIL))
+    $payload=["island_name"=>$island_name,"owner_email"=>$owner_email,"public_key"=>$public_key,"metadata"=>$metadata];
+    $result=$validator->validateCertificatePayload($payload);
+    if (!$result["valid"])
     {
-      Response::error("Invalid owner_email.");
+      Response::error($result["payload"]);
     }
+    $payload=$result["payload"];
+    $island_name=$payload["island_name"];
+    $owner_email=$payload["owner_email"];
+    $public_key=$payload["public_key"];
+    $metadata=$payload["metadata"];
 
-    if (strlen($public_key)>10000)
-    {
-      Response::error("public_key too large.");
-    }
-    $public_key=trim($public_key);
-    if (!openssl_pkey_get_public($public_key))
-    {
-      Response::error("Invalid public_key format.");
-    }
-
-    if (!is_array($metadata))
-    {
-      Response::error("Metadata must be an array.");
-    }
-    if (count($metadata)>200)
-    {
-      Response::error("Metadata contains too many fields.");
-    }
-    ksort($metadata);
-    $metadata_json=json_encode($metadata,JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if ($metadata_json===false)
-    {
-      Response::error("Error encoding metadata as JSON.");
-    }
-    if (strlen($metadata_json)>20000)
-    {
-      Response::error("Metadata too large.");
-    }
-
-    $island_name=trim($island_name);
-    if (empty($island_name))
-    {
-      Response::error("Island name must not contain only spaces.");
-    }
-    $len=strlen($island_name);
-    if (($len<4) || ($len>200))
-    {
-      Response::error("Island name must be between 4 and 200 characters long.");
-    }
-    $pdo=Db::connect(Config::sqlitePath(),__DIR__."/../schema.sql");
-    $stmt=$pdo->prepare("SELECT COUNT(*) FROM islands WHERE island_name = :island_name");
-    $stmt->execute([":island_name"=>$island_name]);
-    if ($stmt->fetchColumn() > 0)
-    {
-      Response::error("Island name already registered.");
-    }
-
-    $config=new Config();
     $island_key=Certificate::random_id(64);
     $extra=["owner_email"=>$owner_email,"island_name"=>$island_name,"public_key"=>$public_key,"island_key"=>$island_key];
     $expiry=86400*90; # 90 days
@@ -91,10 +53,8 @@ class RegisterIsland
     {
       Response::error($result["error"]);
     }
-
     unset($result["valid"]);
     $certificate=json_encode($result);
-
     $stmt=$pdo->prepare("
       INSERT INTO islands (
         island_name,

@@ -21,12 +21,15 @@ class Verify
 
   public function handle(): void
   {
+    $config=new Config();
+    $validator=$config->validator();
+
     $tokenJson=$this->req->post("session_token");
     if (!$tokenJson)
     {
       Response::error("Missing session token.");
     }
-    $config=new Config();
+
     $result=Certificate::verify($config,$tokenJson);
     if ($result["valid"]==false)
     {
@@ -41,15 +44,15 @@ class Verify
     {
       Response::error("Session token has expired.");
     }
-    if (!isset($payload["email"]))
+
+    $validation=$validator->validateVerifyPayload($payload);
+    if (!$validation["valid"])
     {
-      Response::error("Session token missing email field.");
+      Response::error($validation["payload"]);
     }
-    $email=$payload["email"];
-    if (!filter_var($email,FILTER_VALIDATE_EMAIL))
-    {
-      Response::error("Invalid email in session token.");
-    }
+    $clean=$validation["payload"];
+    $email=$clean["email"];
+
     Logger::info("Session token for $email verified");
     Response::success($result);
   }

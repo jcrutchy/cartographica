@@ -1,6 +1,6 @@
 <?php
 
-require __DIR__ . "/utils.php";
+require __DIR__ . "/Utils.php";
 
 test_banner_message("CARTOGRAPHICA TEST SUITE",34);
 
