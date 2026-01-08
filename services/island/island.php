@@ -12,7 +12,7 @@ use cartographica\services\island\player\server\PlayerWebSocketServer;
 
 // 3. Configuration
 $host = "[::]";
-$port = 8080;
+$port = 8081;
 
 echo "Starting Cartographica Island Server...\n";
 echo "Listening on ws://{$host}:{$port}\n";

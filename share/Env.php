@@ -12,7 +12,7 @@ class Env
     private static function bootstrap(): array
     {
         if (self::$bootstrap === null) {
-            self::$bootstrap = require self::root() . '/bootstrap.php';
+            self::$bootstrap = require self::root() . '/services/bootstrap.php';
         }
         return self::$bootstrap;
     }

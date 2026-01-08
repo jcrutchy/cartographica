@@ -26,7 +26,7 @@ class ListIslands
 
     # just respond with a dummy list of islands (for a dummy selected network) for now
     $island_list=[
-      ["id"=>"island_01","ws_url"=>"localhost:8080","name"=>"Noob Island"],
+      ["id"=>"island_01","ws_url"=>"localhost:8081","name"=>"Noob Island"],
       ["id"=>"island_02","ws_url"=>"localhost:8080","name"=>"West Side"],
       ["id"=>"island_03","ws_url"=>"localhost:8080","name"=>"Aussie Slackers"],
       ["id"=>"island_04","ws_url"=>"localhost:8080","name"=>"Euro"],

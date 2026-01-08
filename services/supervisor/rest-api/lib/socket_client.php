@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-function cluster_send_command(array $command): array
+function supervisor_send_command(array $command): array
 {
     $address = '127.0.0.1';
     $port    = 9400;

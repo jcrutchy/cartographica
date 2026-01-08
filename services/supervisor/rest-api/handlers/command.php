@@ -16,7 +16,7 @@ if (!in_array($action, $valid, true)) {
     json_response(['ok' => false, 'error' => 'invalid_action'], 400);
 }
 
-$resp = cluster_send_command([
+$resp = supervisor_send_command([
     'command' => $action,
     'island'  => $id,
 ]);

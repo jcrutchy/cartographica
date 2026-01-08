@@ -4,7 +4,7 @@ require __DIR__ . "/Utils.php";
 
 test_banner_message("CARTOGRAPHICA TEST SUITE",34);
 
-$bootstrap=require dirname(__DIR__)."/bootstrap.php";
+$bootstrap=require dirname(__DIR__)."/services/bootstrap.php";
 $test_data_directory=$bootstrap["test_data"];
 
 if (is_dir($test_data_directory))

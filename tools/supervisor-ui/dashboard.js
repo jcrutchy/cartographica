@@ -1,6 +1,6 @@
-const STATUS_URL = '/cartographica/cluster/api/status.php';
-const COMMAND_URL = '/cartographica/cluster/api/command.php';
-const LOG_URL = '/cartographica/cluster/api/log.php';
+const STATUS_URL = '/cartographica/supervisor/api/status.php';
+const COMMAND_URL = '/cartographica/supervisor/api/command.php';
+const LOG_URL = '/cartographica/supervisor/api/log.php';
 
 async function fetchStatus() {
   const res = await fetch(STATUS_URL);

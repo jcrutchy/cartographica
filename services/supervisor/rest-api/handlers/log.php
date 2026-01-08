@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../lib/socket_client.php';
 
-$DATA_PATH = realpath(__DIR__ . '/../../../cartographica_data/services/cluster');
+$DATA_PATH = realpath(__DIR__ . '/../../../cartographica_data/services/supervisor');
 $logDir    = $DATA_PATH . '/logs';
 
 $id    = $_GET['id'] ?? null;
