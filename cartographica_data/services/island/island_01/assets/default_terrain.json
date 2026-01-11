@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "tile_size": [96, 72],
+  "terrain_height": 48,
+  "grid_columns": 9,
+  "tile_padding": [1, 1],
+  "terrain_index": {
+    "water": [0, 0],
+    "shore": [1, 0],
+    "grassland": [2, 0],
+    "desert": [3, 0],
+    "plains": [4, 0],
+    "tundra": [5, 0],
+    "snow": [6, 0],
+    "swamp": [7, 0]
+  },
+  "default_tile": "grassland"
+}

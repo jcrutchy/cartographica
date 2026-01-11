@@ -6,7 +6,7 @@ use cartographica\share\SharedConfig;
 
 class Config extends SharedConfig
 {
-  protected static string $service="atlas";
+  public static string $service="atlas";
 
   public function validator(): AtlasValidator
   {

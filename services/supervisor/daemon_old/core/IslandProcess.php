@@ -2,6 +2,8 @@
 
 namespace Cartographica\Supervisor;
 
+require_once(__DIR__ . '/../../../../share/ProcessUtils.php');
+
 class IslandProcess
 {
     private string $id;
@@ -36,6 +38,7 @@ class IslandProcess
 
     public function start(): bool
     {
+        echo "IslandProcess::start() invoked for {$this->id}\n";
         $cmd = str_replace('/', '\\', $this->command);
         $cwd = str_replace('/', '\\', $this->cwd);
     
@@ -53,9 +56,11 @@ class IslandProcess
     
         if (!is_resource($this->proc)) {
             $this->logger->error("Failed to start island {$this->id}");
+            echo "IslandProcess::start() failed to start process\n";
             return false;
         }
     
+        echo "IslandProcess::start() started process\n";
         #stream_set_blocking($this->pipes[1], false);
         #stream_set_blocking($this->pipes[2], false);
     
@@ -138,7 +143,7 @@ class IslandProcess
         return $status['running'];
     }
 
-    public function stop(): void
+    public function stop(int $timeoutSeconds = 5): void
     {
         if (!is_resource($this->proc)) {
             return;
@@ -146,9 +151,26 @@ class IslandProcess
 
         $this->logger->info("Stopping island {$this->id}");
 
-        proc_terminate($this->proc);
-        #proc_close($this->proc);
+        $status = proc_get_status($this->proc);
+        $pid = $status['pid'] ?? null;
 
-        #$this->proc = null;
+        if ($pid !== null) {
+            $this->logger->info("Attempting graceful termination of pid $pid for island {$this->id}");
+            $ok = \ProcessUtils::graceful_terminate((int)$pid, $timeoutSeconds);
+            if (!$ok) {
+                $this->logger->warning("Graceful termination failed for pid $pid; attempting force kill");
+                \ProcessUtils::kill_recursive((int)$pid);
+            }
+        } else {
+            // fallback to proc_terminate if we don't have a pid
+            @proc_terminate($this->proc);
+        }
+
+        // Clean up pipes and process resource
+        foreach ($this->pipes as $p) {
+            if (is_resource($p)) @fclose($p);
+        }
+        @proc_close($this->proc);
+        $this->proc = null;
     }
 }

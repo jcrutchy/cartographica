@@ -49,7 +49,8 @@ class SupervisorCore
                 return $this->pm->start($req['island_id'] ?? '');
 
             case 'stop':
-                return $this->pm->stop($req['island_id'] ?? '');
+                $timeout = isset($req['timeout']) ? intval($req['timeout']) : 5;
+                return $this->pm->stop($req['island_id'] ?? '', $timeout);
 
             default:
                 return [

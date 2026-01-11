@@ -28,7 +28,7 @@ class ProcessManager
         return ['ok' => $ok];
     }
 
-    public function stop(string $id): array
+    public function stop(string $id, int $timeoutSeconds = 5): array
     {
         $proc = $this->registry->get($id);
         if (!$proc) {
@@ -39,7 +39,7 @@ class ProcessManager
             return ['ok' => true, 'already_stopped' => true];
         }
 
-        $proc->stop();
+        $proc->stop($timeoutSeconds);
         return ['ok' => true];
     }
 

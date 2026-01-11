@@ -1,8 +1,11 @@
 import { Camera } from "./camera.js";
 import { Renderer } from "./renderer.js";
 
-export class World {
-    constructor(worldData, connection) {
+export class World
+
+{
+    constructor(worldData, connection)
+    {
         this.islands = worldData.islands;
         this.players = worldData.players;
         this.connection = connection;

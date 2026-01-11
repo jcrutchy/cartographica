@@ -1,0 +1,10 @@
+{
+  "name": "Welcome Island",
+  "description": "A peaceful starter island.",
+  "tags": ["starter", "peaceful"],
+  "version": "2026-01-02.01",
+  "island_id": "island_01",
+  "port": 8081,
+  "cwd": "{repo_root}/services/island",
+  "tilemap_seed": "starter_01"
+}

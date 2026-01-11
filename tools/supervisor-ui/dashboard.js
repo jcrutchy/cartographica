@@ -1,75 +1,52 @@
-const STATUS_URL = '/cartographica/supervisor/api/status.php';
-const COMMAND_URL = '/cartographica/supervisor/api/command.php';
-const LOG_URL = '/cartographica/supervisor/api/log.php';
+const STATUS_URL = '/services/supervisor/rest-api/handlers/status.php';
 
 async function fetchStatus() {
   const res = await fetch(STATUS_URL);
   const data = await res.json();
   if (!data.ok) {
-    document.getElementById('status').textContent = 'Error: ' + data.error;
+    document.getElementById('status').textContent = 'Error: ' + JSON.stringify(data);
     return;
   }
-  renderStatus(data.state);
+  // Data format: { ok: true, islands: [ { id, name, port, running, pid, config } ] }
+  renderStatusFromIslands(data.islands);
 }
 
-function renderStatus(state) {
+function renderStatusFromIslands(islands) {
   const container = document.getElementById('status');
   container.innerHTML = '';
 
   const islandSelect = document.getElementById('log-island');
   islandSelect.innerHTML = '';
 
-  state.worlds.forEach(world => {
-    const h3 = document.createElement('h3');
-    h3.textContent = `${world.name} (${world.id})`;
-    container.appendChild(h3);
+  if (!Array.isArray(islands)) {
+    container.textContent = 'No islands found';
+    return;
+  }
 
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-      <tr>
-        <th>ID</th>
-        <th>Port</th>
-        <th>PID</th>
-        <th>Status</th>
-        <th>Uptime</th>
-        <th>Position</th>
-        <th>Actions</th>
-      </tr>
+  const header = document.createElement('div');
+  header.style.marginBottom = '8px';
+  header.textContent = `Islands directory: ${islands.length ? islands[0].config && islands[0].config.islands_dir ? islands[0].config.islands_dir : '' : ''}`;
+  container.appendChild(header);
+
+  islands.forEach(island => {
+    const div = document.createElement('div');
+    div.className = 'island';
+    div.innerHTML = `<strong>${island.id}</strong> — ${island.name || ''} — PID: ${island.pid||'—'} — Running: ${island.running}`;
+
+    const controls = document.createElement('div');
+    controls.style.marginTop = '6px';
+    controls.innerHTML = `
+      <button data-action="start" data-id="${island.id}">Start</button>
+      <button data-action="stop" data-id="${island.id}">Stop</button>
+      <button data-action="restart" data-id="${island.id}">Restart</button>
     `;
-    table.appendChild(thead);
+    div.appendChild(controls);
+    container.appendChild(div);
 
-    const tbody = document.createElement('tbody');
-
-    world.islands.forEach(island => {
-      const tr = document.createElement('tr');
-
-      const statusClass = 'status-' + island.status;
-
-      tr.innerHTML = `
-        <td>${island.id}</td>
-        <td>${island.port}</td>
-        <td>${island.pid ?? ''}</td>
-        <td class="${statusClass}">${island.status}</td>
-        <td>${formatUptime(island.uptime)}</td>
-        <td>${formatPosition(island.position)}</td>
-        <td>
-          <button data-action="start" data-id="${island.id}">Start</button>
-          <button data-action="stop" data-id="${island.id}">Stop</button>
-          <button data-action="restart" data-id="${island.id}">Restart</button>
-        </td>
-      `;
-
-      tbody.appendChild(tr);
-
-      const opt = document.createElement('option');
-      opt.value = island.id;
-      opt.textContent = island.id;
-      islandSelect.appendChild(opt);
-    });
-
-    table.appendChild(tbody);
-    container.appendChild(table);
+    const opt = document.createElement('option');
+    opt.value = island.id;
+    opt.textContent = island.id;
+    islandSelect.appendChild(opt);
   });
 
   container.querySelectorAll('button[data-action]').forEach(btn => {
@@ -82,25 +59,18 @@ function renderStatus(state) {
   });
 }
 
-function formatUptime(seconds) {
-  if (seconds == null) return '';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function formatPosition(pos) {
-  if (!pos) return '';
-  return `(${pos.x}, ${pos.y})`;
-}
-
 async function sendCommand(action, id) {
-  const url = `${COMMAND_URL}?action=${encodeURIComponent(action)}&id=${encodeURIComponent(id)}`;
-  const res = await fetch(url, { method: 'POST' });
+  let url;
+  switch(action) {
+    case 'start': url = `/services/supervisor/rest-api/handlers/start.php?id=${encodeURIComponent(id)}`; break;
+    case 'stop': url = `/services/supervisor/rest-api/handlers/stop.php?id=${encodeURIComponent(id)}`; break;
+    case 'restart': url = `/services/supervisor/rest-api/handlers/restart.php?id=${encodeURIComponent(id)}`; break;
+    default: return;
+  }
+  const res = await fetch(url, { method: 'GET' });
   const data = await res.json();
   if (!data.ok) {
-    alert('Command failed: ' + (data.error || data.message));
+    alert('Command failed: ' + (data.error || data.message || JSON.stringify(data)));
   }
 }
 
@@ -108,7 +78,7 @@ async function fetchLog() {
   const islandId = document.getElementById('log-island').value;
   if (!islandId) return;
 
-  const url = `${LOG_URL}?id=${encodeURIComponent(islandId)}&lines=200`;
+  const url = `/services/supervisor/rest-api/handlers/log.php?id=${encodeURIComponent(islandId)}&lines=200`;
   const res = await fetch(url);
   const data = await res.json();
   if (!data.ok) {

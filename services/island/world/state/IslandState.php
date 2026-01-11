@@ -8,7 +8,7 @@ class IslandState {
     public Tilemap $tilemap;
     public array $players = [];
 
-    public function __construct() {
-        $this->tilemap = new Tilemap(10, 10);
+    public function __construct(string $seed = 'starter_01') {
+        $this->tilemap = new Tilemap(10, 10, $seed);
     }
 }

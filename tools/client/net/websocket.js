@@ -1,12 +1,21 @@
-export class IslandConnection {
-    constructor(identity, ws_url, handlers = {}) {
+export class IslandConnection
+
+{
+    constructor(identity, ws_url, handlers = {})
+    {
         this.identity = identity;
         this.ws_url = ws_url;
         this.ws = null;
         this.handlers = handlers; // { onWorld, onPlayerMoved }
     }
 
-    connect() {
+    defaultTilesetFound()
+    {
+        return !!localStorage.getItem("cartographica_default_tileset");
+    }
+
+    connect()
+    {
         return new Promise((resolve, reject) => {
         console.log(this.ws_url);
             this.ws = new WebSocket(this.ws_url);
@@ -35,7 +44,10 @@ export class IslandConnection {
                         }));
                         break;
                     case "AUTH_OK":
-                        this.ws.send(JSON.stringify({ type: "REQUEST_WORLD" }));
+                        this.ws.send(JSON.stringify({
+                            type: "REQUEST_WORLD",
+                            default_tileset: this.defaultTilesetFound()
+                        }));
                         break;
                     case "WORLD":
                         if (this.handlers.onWorld) {

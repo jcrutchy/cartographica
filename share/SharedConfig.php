@@ -34,19 +34,19 @@ use Exception;
 
 abstract class SharedConfig
 {
-  private static ?array $cache=null;
-  protected static string $service;
-  private ?PDO $pdo=null;
+  public ?array $cache=null;
+  public static string $service;
+  public ?PDO $pdo=null;
 
   function __construct()
   {
   }
 
-  protected static function load(): array
+  protected function load(): array
   {
-    if (self::$cache !== null)
+    if ($this->cache !== null)
     {
-      return self::$cache;
+      return $this->cache;
     }
     $path = Env::sharedConfig();
     if (!file_exists($path))
@@ -54,8 +54,8 @@ abstract class SharedConfig
       throw new \RuntimeException("Shared config not found: $path");
     }
     $json=file_get_contents($path);
-    self::$cache=json_decode($json,true);
-    return self::$cache;
+    $this->cache=json_decode($json,true);
+    return $this->cache;
   }
 
   public function pdo(): PDO
@@ -67,9 +67,9 @@ abstract class SharedConfig
     return $this->pdo;
   }
 
-  public static function get(string $key,$default=null)
+  public function get(string $key,$default=null)
   {
-    $config=self::load();
+    $config=$this->load();
     return $config[$key] ?? $default;
   }
 

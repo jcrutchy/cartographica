@@ -1,0 +1,19 @@
+cartographica_data/
+  services/
+    island/
+      island_01/
+        config.json
+        pid
+        seed
+        flags
+        logs/
+          stdout.log
+          stderr.log
+        state/
+          entities.json
+          tiles/
+            chunk_0_0.bin
+            chunk_0_1.bin
+            ...
+      island_02/
+        ...

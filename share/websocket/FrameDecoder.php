@@ -1,6 +1,6 @@
 <?php
 
-namespace cartographica\services\island\core\websocket;
+namespace cartographica\share\websocket;
 
 class FrameDecoder {
     public static function decode(string $data): ?Frame {

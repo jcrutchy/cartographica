@@ -1,0 +1,6 @@
+{
+  "ipc_listening_port": 9001,
+  "log_dir": "{data_root}/services/supervisor/logs",
+  "islands_dir": "{data_root}/services/island",
+  "command_template": "{php_cli_exec} {repo_root}/services/island/island.php {island_id}"
+}

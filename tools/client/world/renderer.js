@@ -1,11 +1,15 @@
-export class Renderer {
-    constructor(canvas, camera) {
+export class Renderer
+{
+
+    constructor(canvas, camera)
+    {
         this.ctx = canvas.getContext("2d");
         this.camera = camera;
         this.tileSize = 32; // world units per tile
     }
 
-    render(world) {
+    render(world)
+    {
         const ctx = this.ctx;
 
         ctx.fillStyle = "black";
@@ -33,17 +37,54 @@ export class Renderer {
         };
     }
 
-    drawIsland(island) {
-        const ctx = this.ctx;
-        const size = this.tileSize / this.camera.scale;
+    loadTileset(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
 
+    loadTilesetImage(base64)
+    {
+        const img = new Image();
+        img.src = 'data:image/png;base64,' + base64;
+        return img;
+    }
+
+    drawIsland(island) // gets called every update. needs to be efficient
+    {
+        console.log(island);
+        const ctx = this.ctx;
+        const default_tileset = island.default_tileset;
+        const config = default_tileset.cfg;
+        console.log(default_tileset);
+        const tileSize = config.tile_size; // [96, 72]
+        const padding = config.tile_padding || [0, 0];
+        const columns = config.grid_columns;
+
+        const img= this.loadTilesetImage(default_tileset.img);
+        console.log(img);
+    
         for (let y = 0; y < island.tilemap.length; y++) {
             for (let x = 0; x < island.tilemap[y].length; x++) {
+                const terrain = island.tilemap[y][x];
+                const [tx, ty] = config.terrain_index[terrain] || config.terrain_index[config.default_tile];
+    
                 const { wx, wy } = this.islandToWorld(island, x, y);
                 const { x: sx, y: sy } = this.worldToScreen(wx, wy);
-
-                ctx.fillStyle = "#228B22";
-                ctx.fillRect(sx, sy, size, size);
+    
+                const sxTile = tx * (tileSize[0] + padding[0]);
+                const syTile = ty * (tileSize[1] + padding[1]);
+    
+                ctx.drawImage(
+                    img,
+                    sxTile, syTile,
+                    tileSize[0], tileSize[1],
+                    sx, sy - (tileSize[1] - config.terrain_height), // align to bottom
+                    tileSize[0], tileSize[1]
+                );
             }
         }
     }
@@ -65,4 +106,5 @@ export class Renderer {
             ctx.fill();
         }
     }
+
 }

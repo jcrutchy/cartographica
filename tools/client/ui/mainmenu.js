@@ -158,16 +158,17 @@ async function startGame(selected_network) {
     if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
         url = "ws://" + url;
     }
-
     const conn = new IslandConnection(identity, url, {
         onWorld: (msg) => {
+            console.log(msg);
             startWorld({
                 islands: [
                     {
                         id: msg.island_id || "island_01",
                         originX: 0,
                         originY: 0,
-                        tilemap: msg.tilemap
+                        tilemap: msg.tilemap,
+                        default_tileset: msg.default_tileset
                     }
                 ],
                 players: msg.players

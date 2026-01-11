@@ -6,7 +6,7 @@ use cartographica\share\SharedConfig;
 
 class Config extends SharedConfig
 {
-  protected static string $service="identity";
+  public static string $service="identity";
 
   public function validator(): IdentityValidator
   {

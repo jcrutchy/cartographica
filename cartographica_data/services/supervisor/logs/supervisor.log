@@ -1,0 +1,220 @@
+[2026-01-05T22:00:55+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-05T22:00:55+11:00] [INFO] Supervisor started
+[2026-01-06T21:05:53+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:05:53+11:00] [INFO] Supervisor started
+[2026-01-06T21:23:57+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:23:57+11:00] [INFO] Supervisor started
+[2026-01-06T21:24:28+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:24:28+11:00] [INFO] Supervisor started
+[2026-01-06T21:24:33+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:24:33+11:00] [INFO] Supervisor started
+[2026-01-06T21:45:37+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:45:37+11:00] [INFO] Supervisor started
+[2026-01-06T21:51:12+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:51:12+11:00] [INFO] Supervisor started
+[2026-01-06T21:52:01+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:52:01+11:00] [INFO] Supervisor started
+[2026-01-06T21:52:44+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:52:44+11:00] [INFO] Supervisor started
+[2026-01-06T21:53:26+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:53:26+11:00] [INFO] Supervisor started
+[2026-01-06T21:54:47+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T21:54:47+11:00] [INFO] Supervisor started
+[2026-01-06T22:03:35+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:03:35+11:00] [INFO] Supervisor started
+[2026-01-06T22:03:52+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:03:52+11:00] [INFO] Supervisor started
+[2026-01-06T22:04:23+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:04:23+11:00] [INFO] Supervisor started
+[2026-01-06T22:05:32+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:05:32+11:00] [INFO] Supervisor started
+[2026-01-06T22:16:02+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:16:02+11:00] [INFO] Supervisor started
+[2026-01-06T22:48:22+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:48:22+11:00] [INFO] Supervisor started
+[2026-01-06T22:52:05+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:52:05+11:00] [INFO] Supervisor started
+[2026-01-06T22:53:22+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:53:22+11:00] [INFO] Supervisor started
+[2026-01-06T22:57:39+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:57:39+11:00] [INFO] Supervisor started
+[2026-01-06T22:59:04+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T22:59:04+11:00] [INFO] Supervisor started
+[2026-01-06T23:02:26+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T23:02:26+11:00] [INFO] Supervisor started
+[2026-01-06T23:04:10+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-06T23:04:10+11:00] [INFO] Supervisor started
+[2026-01-07T20:23:19+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T20:23:34+11:00] [ERROR] Failed to start island island_01
+[2026-01-07T20:27:48+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T20:27:58+11:00] [INFO] Started island island_01 (PID 16136)
+[2026-01-07T20:31:53+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T20:34:20+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T20:37:37+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:05:45+11:00] [INFO] Supervisor started
+[2026-01-07T21:07:20+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:07:20+11:00] [INFO] Supervisor started
+[2026-01-07T21:12:18+11:00] [INFO] Starting island island_01
+[2026-01-07T21:12:18+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\island\island.php island_01
+[2026-01-07T21:12:18+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:12:18+11:00] [INFO] [island_01] STDOUT: Could not open input file: C:\dev\cartographica\island\island.php
+[2026-01-07T21:15:36+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:15:36+11:00] [INFO] Supervisor started
+[2026-01-07T21:15:40+11:00] [INFO] Starting island island_01
+[2026-01-07T21:15:40+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:15:40+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:17:00+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:17:00+11:00] [INFO] Supervisor started
+[2026-01-07T21:17:05+11:00] [INFO] Starting island island_01
+[2026-01-07T21:17:05+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:17:05+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:18:31+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:18:31+11:00] [INFO] Supervisor started
+[2026-01-07T21:18:34+11:00] [INFO] Starting island island_01
+[2026-01-07T21:18:34+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:18:34+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:23:47+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:23:47+11:00] [INFO] Supervisor started
+[2026-01-07T21:23:52+11:00] [INFO] Starting island island_01
+[2026-01-07T21:23:52+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:23:52+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:40:02+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:40:02+11:00] [INFO] Supervisor started
+[2026-01-07T21:40:15+11:00] [INFO] Starting island island_01
+[2026-01-07T21:40:15+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:40:15+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:47:43+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:47:43+11:00] [INFO] Supervisor started
+[2026-01-07T21:47:48+11:00] [INFO] Starting island island_01
+[2026-01-07T21:47:48+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:47:48+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:52:31+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:52:31+11:00] [INFO] Supervisor started
+[2026-01-07T21:52:36+11:00] [INFO] Starting island island_01
+[2026-01-07T21:52:36+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:52:36+11:00] [INFO]   CWD: C:\dev\cartographica_data\services\island\island_01
+[2026-01-07T21:54:51+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T21:54:51+11:00] [INFO] Supervisor started
+[2026-01-07T21:54:55+11:00] [INFO] Starting island island_01
+[2026-01-07T21:54:55+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T21:54:55+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:39:52+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:39:52+11:00] [INFO] Supervisor started
+[2026-01-07T22:39:58+11:00] [INFO] Starting island island_01
+[2026-01-07T22:39:58+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:39:58+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:40:19+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:40:19+11:00] [INFO] Supervisor started
+[2026-01-07T22:40:22+11:00] [INFO] Starting island island_01
+[2026-01-07T22:40:22+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:40:22+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:43:48+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:43:48+11:00] [INFO] Supervisor started
+[2026-01-07T22:43:52+11:00] [INFO] Starting island island_01
+[2026-01-07T22:43:52+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:43:52+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:43:52+11:00] [INFO] [island_01] STDOUT: Starting Cartographica Island Server...
+[2026-01-07T22:44:32+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:44:32+11:00] [INFO] Supervisor started
+[2026-01-07T22:44:34+11:00] [INFO] Starting island island_01
+[2026-01-07T22:44:34+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:44:34+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:44:34+11:00] [INFO] [island_01] STDOUT: Starting Cartographica Island Server...
+[2026-01-07T22:47:54+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:47:54+11:00] [INFO] Supervisor started
+[2026-01-07T22:47:58+11:00] [INFO] Starting island island_01
+[2026-01-07T22:47:58+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:47:58+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:48:22+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:48:22+11:00] [INFO] Supervisor started
+[2026-01-07T22:48:24+11:00] [INFO] Starting island island_01
+[2026-01-07T22:48:24+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:48:24+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:49:11+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:49:11+11:00] [INFO] Supervisor started
+[2026-01-07T22:49:13+11:00] [INFO] Starting island island_01
+[2026-01-07T22:49:13+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:49:13+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:49:13+11:00] [INFO] Starting Cartographica Island Server...
+Listening on ws://[::]:8081
+
+[2026-01-07T22:51:03+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:51:03+11:00] [INFO] Supervisor started
+[2026-01-07T22:51:06+11:00] [INFO] Starting island island_01
+[2026-01-07T22:51:06+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:51:06+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:51:52+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:51:52+11:00] [INFO] Supervisor started
+[2026-01-07T22:51:54+11:00] [INFO] Starting island island_01
+[2026-01-07T22:51:54+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:51:54+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:52:31+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:52:31+11:00] [INFO] Supervisor started
+[2026-01-07T22:52:33+11:00] [INFO] Starting island island_01
+[2026-01-07T22:52:33+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:52:33+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:53:23+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:53:23+11:00] [INFO] Supervisor started
+[2026-01-07T22:53:39+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:53:39+11:00] [INFO] Supervisor started
+[2026-01-07T22:53:43+11:00] [INFO] Starting island island_01
+[2026-01-07T22:53:43+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:53:43+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:56:47+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:56:47+11:00] [INFO] Supervisor started
+[2026-01-07T22:56:51+11:00] [INFO] Starting island island_01
+[2026-01-07T22:56:51+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:56:51+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T22:57:50+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T22:57:50+11:00] [INFO] Supervisor started
+[2026-01-07T22:57:53+11:00] [INFO] Starting island island_01
+[2026-01-07T22:57:53+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T22:57:53+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:00:10+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:00:10+11:00] [INFO] Supervisor started
+[2026-01-07T23:00:13+11:00] [INFO] Starting island island_01
+[2026-01-07T23:00:13+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:00:13+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:01:56+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:01:56+11:00] [INFO] Supervisor started
+[2026-01-07T23:01:59+11:00] [INFO] Starting island island_01
+[2026-01-07T23:01:59+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:01:59+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:03:50+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:03:50+11:00] [INFO] Supervisor started
+[2026-01-07T23:03:54+11:00] [INFO] Starting island island_01
+[2026-01-07T23:03:54+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:03:54+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:04:47+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:04:47+11:00] [INFO] Supervisor started
+[2026-01-07T23:04:49+11:00] [INFO] Starting island island_01
+[2026-01-07T23:04:49+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:04:49+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:11:42+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:11:42+11:00] [INFO] Supervisor started
+[2026-01-07T23:11:46+11:00] [INFO] Starting island island_01
+[2026-01-07T23:11:46+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:11:46+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:14:27+11:00] [INFO] IPC TCP server listening on 127.0.0.1:9001
+[2026-01-07T23:14:27+11:00] [INFO] Supervisor started
+[2026-01-07T23:14:33+11:00] [INFO] Starting island island_01
+[2026-01-07T23:14:33+11:00] [INFO]   CMD: c:\php\php C:\dev\cartographica\services\island\island.php island_01
+[2026-01-07T23:14:33+11:00] [INFO]   CWD: C:\dev\cartographica\services\island
+[2026-01-07T23:14:33+11:00] [INFO] Starting Cartographica Island Server...
+
+[2026-01-07T23:14:33+11:00] [INFO] Listening on ws://[::]:8081
+
+[2026-01-07T23:14:45+11:00] [INFO] New WebSocket client connected
+
+[2026-01-07T23:14:50+11:00] [INFO] Received message: {"type":"AUTH","payload":{"issued_at":1767517277,"expires_at":1770109277,"type":"session_token","email":"jared.crutchfield@wideband.net.au","session_id":"61614b5ba90c20a842ba55d13264070159d6149d548adab76d38c54c75ca6c8b","player_id":"dc57b2e02b2842c95ba2188a40680796"},"signature":"GGv8sgdiBS9K0U5Z3HySSfpYaJ9nwX8DUVADtYyFNF2TtCdkYmXDDzsLUK8WqKEG6JEFhztGWtJ9q\/Av2LHEaMT8UJVqTd8uZhaS60SmMoBy7MV\/Zly5AKg6mbB2RSxgcRHMy\/pvV\/4TTnVI+R8EhbubCDqHHlHMZJQZ8IUwLEHwxGICW6dgA3LMAOQfRsouoyZcCQyZxgVodNngJHdjUq6h0zkQqfsNvtxqr9YjnSo3RmB9tPRR156DgiO38szVeg3EtP4KvRjJ1nm2OZBX5DygH7zs3+PK+jGh954YskhPvRDzlL\/xegNjMDJ4jRn5f4Exs4CpCMtDWFmcxL7vaQ=="}
+
+[2026-01-07T23:14:50+11:00] [INFO] Routing message type: AUTH
+
+[2026-01-07T23:14:50+11:00] [INFO] AUTH received from dc57b2e02b2842c95ba2188a40680796
+
+[2026-01-07T23:14:55+11:00] [INFO] Received message: {"type":"REQUEST_WORLD"}
+
+[2026-01-07T23:14:55+11:00] [INFO] Routing message type: REQUEST_WORLD
+
+[2026-01-07T23:14:55+11:00] [INFO] Sending WORLD to dc57b2e02b2842c95ba2188a40680796
+

@@ -1,0 +1,12 @@
+{
+  "web_root": "http://localhost/cartographica",
+  "environment": "development",
+  "identity_url": "http://localhost/cartographica/services/identity",
+  "atlas_url": "http://localhost/cartographica/services/atlas",
+  "smtp_host": "mail.aussiebroadband.com.au",
+  "smtp_port": 587,
+  "smtp_from_email": "jared.crutchfield@wideband.net.au",
+  "smtp_creds_file_relative": "/shared/smtp_credentials.txt",
+  "cacert_file_relative": "/shared/cacert.pem",
+  "admin_email": "jared.crutchfield@wideband.net.au"
+}

@@ -7,6 +7,8 @@ export class Camera {
         this.dragging = false;
         this.lastX = 0;
         this.lastY = 0;
+        
+        this.invertZoomDirection  = true;
 
         this.MIN_SCALE = 0.01;
         this.ZOOM_SENSITIVITY = -0.0015;
@@ -49,7 +51,11 @@ export class Camera {
             const my = e.clientY - rect.top;
 
             const oldScale = this.scale;
-            const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY);
+            //const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY);
+
+const direction = this.invertZoomDirection ? -1 : 1;
+const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY * direction);
+
             let newScale = oldScale * zoomFactor;
             newScale = Math.max(newScale, this.MIN_SCALE);
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace cartographica\services\island\core\websocket;
+namespace cartographica\share\websocket;
 
 class FrameEncoder {
     public static function encode(Frame $frame): string {
