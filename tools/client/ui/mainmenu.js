@@ -7,13 +7,14 @@ import { World } from "../world/world.js";
 
 let world = null;
 
-function startWorld(worldData, connection) {
+async function startWorld(worldData, connection) {
     console.log("Starting world...");
 
     const root = document.getElementById("menu-root");
     root.innerHTML = "";
 
     world = new World(worldData, connection);
+    await world.init();
     world.start();
 }
 
@@ -164,7 +165,7 @@ async function startGame(selected_network) {
             startWorld({
                 islands: [
                     {
-                        id: msg.island_id || "island_01",
+                        id: msg.island_id,
                         originX: 0,
                         originY: 0,
                         tilemap: msg.tilemap,

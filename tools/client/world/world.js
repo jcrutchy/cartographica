@@ -1,11 +1,8 @@
 import { Camera } from "./camera.js";
 import { Renderer } from "./renderer.js";
 
-export class World
-
-{
-    constructor(worldData, connection)
-    {
+export class World {
+    constructor(worldData, connection) {
         this.islands = worldData.islands;
         this.players = worldData.players;
         this.connection = connection;
@@ -25,6 +22,13 @@ export class World
         this.autoFollow = true;
 
         window.addEventListener("resize", () => this.resizeCanvas());
+    }
+
+    async init() {
+        for (const island of this.islands) {
+            const tileset = island.default_tileset;
+            await this.renderer.loadTilesetImage(tileset.img, tileset.cfg);
+        }
     }
 
     resizeCanvas() {

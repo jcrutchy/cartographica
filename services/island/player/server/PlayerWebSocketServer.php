@@ -14,7 +14,7 @@ class PlayerWebSocketServer extends WebSocketServer
 
     public function __construct(string $host, int $port, Config $config)
     {
-        $this->state = new IslandState();
+        $this->state = new IslandState($config);
         $this->router = new PlayerMessageRouter($config);
         $this->config = $config;
         parent::__construct($host,$port);

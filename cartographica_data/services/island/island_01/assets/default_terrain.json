@@ -14,5 +14,15 @@
     "snow": [6, 0],
     "swamp": [7, 0]
   },
+  "map_palette": {
+    "water": 0,
+    "shore": 1,
+    "grassland": 2,
+    "desert": 3,
+    "plains": 4,
+    "tundra": 5,
+    "snow": 5,
+    "swamp": 7
+  },
   "default_tile": "grassland"
 }

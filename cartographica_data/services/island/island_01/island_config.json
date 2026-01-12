@@ -6,5 +6,7 @@
   "island_id": "island_01",
   "port": 8081,
   "cwd": "{repo_root}/services/island",
+  "w": 50,
+  "h":70,
   "tilemap_seed": "starter_01"
 }

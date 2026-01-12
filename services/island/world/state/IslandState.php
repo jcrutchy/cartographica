@@ -3,12 +3,13 @@
 namespace cartographica\services\island\world\state;
 
 use cartographica\services\island\world\tilemap\Tilemap;
+use cartographica\services\island\Config;
 
 class IslandState {
     public Tilemap $tilemap;
     public array $players = [];
 
-    public function __construct(string $seed = 'starter_01') {
-        $this->tilemap = new Tilemap(10, 10, $seed);
+    public function __construct(Config $config) {
+        $this->tilemap = new Tilemap($config);
     }
 }

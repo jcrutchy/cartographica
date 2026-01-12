@@ -2,21 +2,15 @@
 
 namespace cartographica\services\island\world\tilemap;
 
+use cartographica\services\island\Config;
+use cartographica\share\Env;
+
 class Tilemap {
     public array $tiles = [];
 
-    public static array $tileLegend = [
-        0 => 'Water',
-        1 => 'Shore',
-        2 => 'Grassland',
-        3 => 'Forest',
-        4 => 'Hills',
-        5 => 'Mountain',
-        6 => 'Village'
-    ];
-
-    public function __construct(int $w, int $h, string $seed) {
-        $this->tiles = $this->generateTilemap($w, $h, $seed);
+    public function __construct(Config $config)
+    {
+        $this->tiles = $this->generateTilemap($config);
     }
 
     public function export(): array {
@@ -29,7 +23,18 @@ class Tilemap {
         return mt_rand() / mt_getrandmax(); // 0.0 to 1.0
     }
 
-    private function generateTilemap(int $width, int $height, string $seed): array {
+    private function generateTilemap(Config $config): array
+    {
+
+        $cfg = $config->cache;
+        $width = $cfg["w"];
+        $height = $cfg["h"];
+        $seed = $cfg["tilemap_seed"];
+
+        $asset_path=Env::serviceData("island")."/".$config->islandId."/assets/";
+        $tilesetConfigPath=$asset_path."default_terrain.json";
+        $default_tileset_cfg=json_decode(file_get_contents($tilesetConfigPath), true);
+
         $map = [];
         echo "generating tilemap based on seed \"".$seed."\"".PHP_EOL;
         for ($y = 0; $y < $height; $y++) {
@@ -46,21 +51,32 @@ class Tilemap {
                 // Elevation with noise
                 $elevation = $this->noise($x, $y, $seed) * $falloff;
     
+/*
+  "map_palette": {
+    "water": 0,
+    "shore": 1,
+    "grassland": 2,
+    "desert": 3,
+    "plains": 4,
+    "tundra": 5,
+    "snow": 5,
+    "swamp": 7
+  },
+*/
+    
                 // Biome mapping
                 if ($elevation < 0.2) {
-                    $tile = 0; // Water
+                    $tile = $default_tileset_cfg["map_palette"]["water"];
                 } elseif ($elevation < 0.3) {
-                    $tile = 1; // Shore
+                    $tile = $default_tileset_cfg["map_palette"]["shore"];
                 } elseif ($elevation < 0.45) {
-                    $tile = 2; // Grassland
+                    $tile = $default_tileset_cfg["map_palette"]["plains"];
                 } elseif ($elevation < 0.6) {
-                    $tile = 3; // Forest
+                    $tile = $default_tileset_cfg["map_palette"]["grassland"];
                 } elseif ($elevation < 0.75) {
-                    $tile = 4; // Hills
-                } elseif ($elevation < 0.9) {
-                    $tile = 5; // Mountain
+                    $tile = $default_tileset_cfg["map_palette"]["desert"];
                 } else {
-                    $tile = 6; // Village (rare)
+                    $tile = $default_tileset_cfg["map_palette"]["tundra"];
                 }
     
                 $row[] = $tile;

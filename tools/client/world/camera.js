@@ -7,11 +7,9 @@ export class Camera {
         this.dragging = false;
         this.lastX = 0;
         this.lastY = 0;
-        
-        this.invertZoomDirection  = true;
 
         this.MIN_SCALE = 0.01;
-        this.ZOOM_SENSITIVITY = -0.0015;
+        this.ZOOM_SENSITIVITY = 0.0002;
 
         // -----------------------------
         // DRAG PANNING (world space)
@@ -31,40 +29,37 @@ export class Camera {
             const dx = e.clientX - this.lastX;
             const dy = e.clientY - this.lastY;
 
-            this.x -= dx * this.scale;
-            this.y -= dy * this.scale;
+this.x -= dx / this.scale;
+this.y -= dy / this.scale;
 
             this.lastX = e.clientX;
             this.lastY = e.clientY;
         });
 
-        // -----------------------------
-        // CAD-STYLE MOUSE-CENTRED ZOOM
-        // -----------------------------
         canvas.addEventListener("wheel", e => {
             e.preventDefault();
-
             this.dragging = false;
-
+        
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
-
+        
             const oldScale = this.scale;
-
-            const direction = this.invertZoomDirection ? -1 : 1;
-            const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY * direction);
-
-            let newScale = oldScale * zoomFactor;
-            newScale = Math.max(newScale, this.MIN_SCALE);
-
-            const wx = (mx - canvas.width / 2) * oldScale + this.x;
-            const wy = (my - canvas.height / 2) * oldScale + this.y;
-
+        
+            // ✅ Positive sensitivity, no direction flip
+            const zoomFactor = Math.exp(-e.deltaY * this.ZOOM_SENSITIVITY); // ZOOM_SENSITIVITY = 0.0015
+        
+            const newScale = Math.max(this.MIN_SCALE, oldScale * zoomFactor);
+        
+            // World coords under mouse before zoom
+            const wx = (mx - canvas.width / 2) / oldScale + this.x;
+            const wy = (my - canvas.height / 2) / oldScale + this.y;
+        
             this.scale = newScale;
-
-            this.x = wx - (mx - canvas.width / 2) * newScale;
-            this.y = wy - (my - canvas.height / 2) * newScale;
+        
+            // Adjust camera to keep mouse world point fixed
+            this.x = wx - (mx - canvas.width / 2) / newScale;
+            this.y = wy - (my - canvas.height / 2) / newScale;
         }, { passive: false });
     }
 
