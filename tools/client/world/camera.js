@@ -51,10 +51,9 @@ export class Camera {
             const my = e.clientY - rect.top;
 
             const oldScale = this.scale;
-            //const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY);
 
-const direction = this.invertZoomDirection ? -1 : 1;
-const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY * direction);
+            const direction = this.invertZoomDirection ? -1 : 1;
+            const zoomFactor = Math.exp(e.deltaY * this.ZOOM_SENSITIVITY * direction);
 
             let newScale = oldScale * zoomFactor;
             newScale = Math.max(newScale, this.MIN_SCALE);
