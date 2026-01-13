@@ -4,6 +4,7 @@
   "terrain_height": 48,
   "grid_columns": 9,
   "tile_padding": [1, 1],
+
   "terrain_index": {
     "water": [0, 0],
     "shore": [1, 0],
@@ -14,6 +15,7 @@
     "snow": [6, 0],
     "swamp": [7, 0]
   },
+
   "map_palette": {
     "water": 0,
     "shore": 1,
@@ -24,5 +26,31 @@
     "snow": 5,
     "swamp": 7
   },
-  "default_tile": "grassland"
+
+  "default_tile": "grassland",
+
+  "coastlines": {
+    "grassland": {
+      "row": 17,
+      "column": 0,
+      "count": 8,
+      "quarter_order": ["tl", "tr", "bl", "br"]
+    },
+    "ice": {
+      "row": 16,
+      "column": 0,
+      "count": 8,
+      "quarter_order": ["tl", "tr", "bl", "br"]
+    },
+
+    "biome_map": {
+      "grassland": "grassland",
+      "plains": "grassland",
+      "desert": "grassland",
+      "swamp": "grassland",
+
+      "tundra": "ice",
+      "snow": "ice"
+    }
+  }
 }

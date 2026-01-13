@@ -4,7 +4,10 @@ export class Renderer {
         this.ctx.imageSmoothingEnabled = false;
         this.camera = camera;
         this.tileSize = 32;
-        this.tilesetCache = new Map(); // base64 → { tiles, config }
+        this.tilesetCache = new Map();
+
+        // Debug toggle
+        this.debugCoastlines = true;
     }
 
     render(world) {
@@ -41,25 +44,24 @@ export class Renderer {
         if (this.tilesetCache.has(base64)) {
             return this.tilesetCache.get(base64);
         }
-    
+
         const img = await new Promise((resolve, reject) => {
             const image = new Image();
             image.onload = () => resolve(image);
             image.onerror = reject;
             image.src = 'data:image/png;base64,' + base64;
         });
-    
+
         const transparent = this.makeTransparent(img, [
             [127, 0, 127],
             [255, 0, 255]
         ]);
-    
-        // ✅ Wait for transparent image to load
+
         await new Promise((resolve, reject) => {
             transparent.onload = () => resolve();
             transparent.onerror = reject;
         });
-    
+
         const tiles = this.extractTiles(transparent, config);
         const cached = { tiles, config };
         this.tilesetCache.set(base64, cached);
@@ -125,8 +127,40 @@ export class Renderer {
         return tiles;
     }
 
-    drawIsland(island) {
+    isCoastTile(island, x, y) {
+        const cell = island.tilemap[y][x];
+        if (!cell || cell.biome === "water") return false;
+    
+        const north = this.getBiome(island, x, y - 1);
+        const south = this.getBiome(island, x, y + 1);
+        const west  = this.getBiome(island, x - 1, y);
+        const east  = this.getBiome(island, x + 1, y);
+    
+        return (
+            north === "water" ||
+            south === "water" ||
+            west  === "water" ||
+            east  === "water"
+        );
+    }
 
+    // ---------------------------------------------------------
+    // NEW: Helper to get biome safely
+    // ---------------------------------------------------------
+    getBiome(island, x, y) {
+        if (y < 0 || y >= island.tilemap.length) return "water";
+        if (x < 0 || x >= island.tilemap[0].length) return "water";
+        return island.tilemap[y][x].biome;
+    }
+
+    isWater(biome) {
+        return biome === "water" || biome === "shore";
+    }
+
+    // ---------------------------------------------------------
+    // NEW: Draw island with coastline quarter tiles
+    // ---------------------------------------------------------
+    drawIsland(island) {
         const ctx = this.ctx;
         const tileset = island.default_tileset;
         const config = tileset.cfg;
@@ -140,18 +174,16 @@ export class Renderer {
         const terrainH = config.terrain_height / 2;
 
         const cached = this.tilesetCache.get(tileset.img);
-
         if (!cached) return;
 
         const tiles = cached.tiles;
 
         for (let y = 0; y < island.tilemap.length; y++) {
-            for (let x = 0; x < island.tilemap[y].length; x++)
-            {
+            for (let x = 0; x < island.tilemap[y].length; x++) {
 
-                const terrainId = island.tilemap[y][x];
-                const terrain = config.palette_map?.[terrainId] ?? config.default_tile;
-                const [tx, ty] = config.terrain_index[terrain] || config.terrain_index[config.default_tile];
+                const cell = island.tilemap[y][x];
+                const terrain = config.palette_map[cell.tile] ?? config.default_tile;
+                const [tx, ty] = config.terrain_index[terrain];
 
                 let wx = island.originX + x * tileW;
                 let wy = island.originY + y * terrainH;
@@ -160,12 +192,94 @@ export class Renderer {
                 const drawX = wx - tileW / 2;
                 const drawY = wy - tileH;
 
-                const tileIndex = ty * config.grid_columns + tx;
-                const tileImage = tiles[tileIndex];
+                const baseIndex = ty * config.grid_columns + tx;
+                const baseTile = tiles[baseIndex];
+                if (baseTile) ctx.drawImage(baseTile, drawX, drawY);
 
-                if (!tileImage) continue;
+                // ---------------------------------------------------------
+                // Draw coastline quarter tiles
+                // ---------------------------------------------------------
+                if (cell.coast) {
+                    const coastRow = cell.coast.row;
+                    const coastCol = 0;
 
-                ctx.drawImage(tileImage, drawX, drawY);
+                    const quarterW = tileW / 2;
+                    const quarterH = tileH / 2;
+
+                    const drawQuarter = (corner, index) => {
+                        const tileIndex = coastRow * config.grid_columns + (coastCol + index);
+                        const tileImg = tiles[tileIndex];
+                        if (!tileImg) return;
+
+                        // Source crop
+                        const sx = (corner === "tr" || corner === "br") ? quarterW : 0;
+                        const sy = (corner === "bl" || corner === "br") ? quarterH : 0;
+
+                        // Destination
+                        const dx = drawX + sx;
+                        const dy = drawY + sy;
+
+                        ctx.drawImage(
+                            tileImg,
+                            sx, sy, quarterW, quarterH,
+                            dx, dy, quarterW, quarterH
+                        );
+                    };
+
+                    //drawQuarter("tl", cell.coast.tl);
+                    //drawQuarter("tr", cell.coast.tr);
+                    //drawQuarter("bl", cell.coast.bl);
+                    //drawQuarter("br", cell.coast.br);
+                }
+            }
+        }
+
+        for (let y = 0; y < island.tilemap.length; y++)
+        {
+            for (let x = 0; x < island.tilemap[y].length; x++)
+            {
+
+                const cell = island.tilemap[y][x];
+                const terrain = config.palette_map[cell.tile] ?? config.default_tile;
+                const [tx, ty] = config.terrain_index[terrain];
+
+                let wx = island.originX + x * tileW;
+                let wy = island.originY + y * terrainH;
+                if (y % 2 === 1) wx += tileW / 2;
+
+                const drawX = wx - tileW / 2;
+                const drawY = wy + tileH;
+
+                const baseIndex = ty * config.grid_columns + tx;
+                const baseTile = tiles[baseIndex];
+
+                if (this.debugCoastlines) {
+                    const cell = island.tilemap[y][x];
+                    if (!cell || cell.biome === "water") {
+                        // Skip overlay, but DO NOT return
+                    } else {
+                        const tileCenterX = wx;
+                        const tileCenterY = wy;
+                
+                        const drawDiag = (dx, dy) => {
+                            ctx.beginPath();
+                            ctx.moveTo(tileCenterX, tileCenterY);
+                            ctx.lineTo(tileCenterX + dx, tileCenterY + dy);
+                            ctx.stroke();
+                        };
+                
+                        ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+                        ctx.lineWidth = 2;
+
+                        const isWater = (biome) => biome === "water" || biome === "shore";
+
+                        if (isWater(this.getBiome(island, x - 1, y - 1))) drawDiag(-tileW / 2, -terrainH); // NW
+                        if (isWater(this.getBiome(island, x + 1, y - 1))) drawDiag(+tileW / 2, -terrainH); // NE
+                        if (isWater(this.getBiome(island, x - 1, y + 1))) drawDiag(-tileW / 2, +terrainH); // SW
+                        if (isWater(this.getBiome(island, x + 1, y + 1))) drawDiag(+tileW / 2, +terrainH); // SE
+                    }
+                }
+
             }
         }
     }
