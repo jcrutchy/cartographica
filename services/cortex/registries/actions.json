@@ -1,0 +1,9 @@
+{
+  "actions": [
+    {"name": "move_north"},
+    {"name": "move_south"},
+    {"name": "move_east"},
+    {"name": "move_west"},
+    {"name": "idle"}
+  ]
+}

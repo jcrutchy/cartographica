@@ -1,0 +1,43 @@
+object FormMain: TFormMain
+  Left = 278
+  Height = 518
+  Top = 254
+  Width = 646
+  Caption = 'Cartographica'
+  ClientHeight = 518
+  ClientWidth = 646
+  LCLVersion = '4.4.0.0'
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  object MemoLog: TMemo
+    Left = 0
+    Height = 418
+    Top = 50
+    Width = 646
+    Align = alClient
+    Color = clBlack
+    Font.Color = clWhite
+    Font.Name = 'Consolas'
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssAutoBoth
+    TabOrder = 0
+    WordWrap = False
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 646
+    Align = alTop
+    TabOrder = 1
+  end
+  object Panel2: TPanel
+    Left = 0
+    Height = 50
+    Top = 468
+    Width = 646
+    Align = alBottom
+    TabOrder = 2
+  end
+end

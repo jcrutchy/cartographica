@@ -1,0 +1,7 @@
+{
+  "roles": [
+    {"id": 1, "name": "worker"},
+    {"id": 2, "name": "explorer"},
+    {"id": 3, "name": "moderator"}
+  ]
+}

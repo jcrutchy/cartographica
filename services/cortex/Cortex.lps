@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="Cortex.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <CursorPos X="40" Y="10"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MainForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uCortexMain"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="93"/>
+        <CursorPos X="24" Y="105"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubraindelta.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainDelta"/>
+        <EditorIndex Value="3"/>
+        <CursorPos X="21" Y="5"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubrainforward.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainForward"/>
+        <EditorIndex Value="4"/>
+        <CursorPos X="19" Y="4"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubrainregistry.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainRegistry"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="7"/>
+        <CursorPos X="15" Y="51"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubraintypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainTypes"/>
+        <EditorIndex Value="6"/>
+        <CursorPos X="25" Y="17"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexruntime.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uCortexRuntime"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="46" Y="52"/>
+        <UsageCount Value="35"/>
+      </Unit>
+      <Unit>
+        <Filename Value="unpcregistry.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uNpcRegistry"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="7"/>
+        <CursorPos X="18"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexserverthread.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uCortexServerThread"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="21" Y="238"/>
+        <UsageCount Value="35"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="usocketserver.pas"/>
+        <UnitName Value="uSocketServer"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="37" Y="14"/>
+        <UsageCount Value="19"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\lazarus\lcl\interfaces\win32\win32object.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="411"/>
+        <CursorPos Y="427"/>
+        <UsageCount Value="9"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="21">
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="71" Column="109" TopLine="71"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="70" Column="109" TopLine="70"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="71" Column="109" TopLine="71"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="72" Column="109" TopLine="72"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="71" Column="109" TopLine="71"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="70" Column="109" TopLine="70"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="69" Column="109" TopLine="69"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="68" Column="109" TopLine="68"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="51" Column="31" TopLine="38"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="53" Column="31" TopLine="40"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="81" Column="33" TopLine="74"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="102" Column="10" TopLine="82"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="94" Column="21" TopLine="82"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="22" Column="46" TopLine="5"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="12" Column="13"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="105" Column="26" TopLine="83"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexmain.pas"/>
+        <Caret Line="106" Column="100" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexserverthread.pas"/>
+        <Caret Line="16" Column="21"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexserverthread.pas"/>
+        <Caret Line="208" Column="31" TopLine="193"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexserverthread.pas"/>
+        <Caret Line="235" Column="5"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexserverthread.pas"/>
+        <Caret Line="225" Column="36" TopLine="201"/>
+      </Position>
+      <Position>
+        <Filename Value="ucortexserverthread.pas"/>
+        <Caret Line="231" Column="26" TopLine="215"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>

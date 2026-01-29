@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shoreline Demo</title>
+  <style>
+    body {
+      background: #222;
+      color: #eee;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #555;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Shoreline Detection Demo</h1>
+  <canvas id="map" width="320" height="320"></canvas>
+
+  <script>
+    const canvas = document.getElementById("map");
+    const ctx = canvas.getContext("2d");
+    const tileSize = 32;
+    const rows = 10;
+    const cols = 10;
+
+    // Terrain types
+    const WATER = 0;
+    const LAND = 1;
+    const SHORE = 2;
+
+    // Generate dummy island
+    const map = [];
+    for (let y = 0; y < rows; y++) {
+      const row = [];
+      for (let x = 0; x < cols; x++) {
+        // Simple island shape
+        const dist = Math.hypot(x - cols / 2, y - rows / 2);
+        row.push(dist < 3 ? LAND : WATER);
+      }
+      map.push(row);
+    }
+
+    // Detect shorelines
+    const result = map.map((row, y) =>
+      row.map((cell, x) => {
+        if (cell !== LAND) return cell;
+        const neighbors = [
+          [x, y - 1],
+          [x, y + 1],
+          [x - 1, y],
+          [x + 1, y]
+        ];
+        for (const [nx, ny] of neighbors) {
+          if (
+            nx >= 0 && nx < cols &&
+            ny >= 0 && ny < rows &&
+            map[ny][nx] === WATER
+          ) {
+            return SHORE;
+          }
+        }
+        return LAND;
+      })
+    );
+
+    // Draw map
+    function draw() {
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const t = result[y][x];
+          ctx.fillStyle =
+            t === WATER ? "#3366cc" :
+            t === LAND ? "#228B22" :
+            "#c2b280"; // SHORE
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        }
+      }
+    }
+
+    draw();
+  </script>
+</body>
+</html>

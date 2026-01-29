@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="12"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <Title Value="Cortex"/>
+      <Scaled Value="True"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <XPManifest>
+        <DpiAware Value="True"/>
+      </XPManifest>
+      <Icon Value="0"/>
+    </General>
+    <BuildModes>
+      <Item Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <UseFileFilters Value="True"/>
+    </PublishOptions>
+    <RunParams>
+      <FormatVersion Value="2"/>
+    </RunParams>
+    <RequiredPackages>
+      <Item>
+        <PackageName Value="LCL"/>
+      </Item>
+    </RequiredPackages>
+    <Units>
+      <Unit>
+        <Filename Value="Cortex.lpr"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MainForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uCortexMain"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubraindelta.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainDelta"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubrainforward.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainForward"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubrainregistry.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainRegistry"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ubraintypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uBrainTypes"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexruntime.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uCortexRuntime"/>
+      </Unit>
+      <Unit>
+        <Filename Value="unpcregistry.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uNpcRegistry"/>
+      </Unit>
+      <Unit>
+        <Filename Value="ucortexserverthread.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uCortexServerThread"/>
+      </Unit>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="Cortex"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf3"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions>
+      <Item>
+        <Name Value="EAbort"/>
+      </Item>
+      <Item>
+        <Name Value="ECodetoolError"/>
+      </Item>
+      <Item>
+        <Name Value="EFOpenError"/>
+      </Item>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

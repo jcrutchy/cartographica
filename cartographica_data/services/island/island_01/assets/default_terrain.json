@@ -34,7 +34,17 @@
       "row": 17,
       "column": 0,
       "count": 8,
-      "quarter_order": ["tl", "tr", "bl", "br"]
+      "quarter_order": ["tl", "tr", "bl", "br"],
+      "mask": [
+        "wwwwwwww,wwwwwwww,wwwwwwww,wwwwwwww",
+        "wwwwwwll,wwllwwww,llwwwwww,wwwwllww",
+        "lwwwwwww,wwwwlwww,wwlwwwww,wwwwwwlw",
+        "lwwwwwll,wwlllwww,lllwwwww,wwwwlllw",
+        "wllwwwww,wwwwwllw,wwwllwww,lwwwwwwl",
+        "wllwwwll,wwllwllw,llwllwww,lwwwllwl",
+        "lllwwwww,wwwwlllw,wwlllwww,lwwwwwll",
+        "lllwwwll,wwlllllw,lllllwww,lwwwllll"
+      ]
     },
     "ice": {
       "row": 16,
@@ -42,13 +52,11 @@
       "count": 8,
       "quarter_order": ["tl", "tr", "bl", "br"]
     },
-
     "biome_map": {
       "grassland": "grassland",
       "plains": "grassland",
       "desert": "grassland",
       "swamp": "grassland",
-
       "tundra": "ice",
       "snow": "ice"
     }

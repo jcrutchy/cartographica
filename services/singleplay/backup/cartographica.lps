@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="cartographica.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="34" Y="11"/>
+        <UsageCount Value="33"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="umain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="uMain"/>
+        <CursorPos X="21" Y="29"/>
+        <UsageCount Value="33"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="net\uwebsocketserver.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uWebSocketServer"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="453"/>
+        <CursorPos X="30" Y="475"/>
+        <UsageCount Value="31"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\utilemap.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uTileMap"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="76"/>
+        <CursorPos X="18" Y="94"/>
+        <UsageCount Value="31"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uisland.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uIsland"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="42"/>
+        <CursorPos X="28" Y="46"/>
+        <UsageCount Value="31"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uworld.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uWorld"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="101"/>
+        <CursorPos X="70" Y="116"/>
+        <UsageCount Value="31"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\ugameserver.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uGameServer"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="76"/>
+        <CursorPos X="27" Y="183"/>
+        <UsageCount Value="31"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uplayer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uPlayer"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="56" Y="8"/>
+        <UsageCount Value="31"/>
+      </Unit>
+      <Unit>
+        <Filename Value="util\ulog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uLog"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="36"/>
+        <CursorPos X="14" Y="67"/>
+        <UsageCount Value="31"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uconfig.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uConfig"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="10"/>
+        <CursorPos X="27" Y="52"/>
+        <UsageCount Value="30"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uprotocol.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uProtocol"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="4"/>
+        <CursorPos X="36" Y="25"/>
+        <UsageCount Value="28"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uwebsocketserver.pas"/>
+        <UnitName Value="uWebSocketServer"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="234"/>
+        <CursorPos X="22" Y="244"/>
+        <UsageCount Value="21"/>
+      </Unit>
+      <Unit>
+        <Filename Value="uworldserializer.pas"/>
+        <UnitName Value="uWorldSerializer"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="24" Y="19"/>
+        <UsageCount Value="20"/>
+      </Unit>
+      <Unit>
+        <Filename Value="game\uworldserializer.pas"/>
+        <UnitName Value="uWorldSerializer"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="57" Y="20"/>
+        <UsageCount Value="20"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\lazarus\components\lazutils\lazutils.pas"/>
+        <UnitName Value="LazUtils"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="12" Y="14"/>
+        <UsageCount Value="10"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="14">
+      <Position>
+        <Filename Value="cartographica.lpr"/>
+        <Caret Line="16" Column="69"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="257" Column="22" TopLine="112"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="173" Column="48" TopLine="151"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="30" Column="30" TopLine="11"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="81" Column="26" TopLine="62"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="108" Column="65" TopLine="80"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="12" Column="26"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="143" Column="15" TopLine="124"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="20" Column="24"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="184" Column="25" TopLine="162"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="9" Column="35"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="11" Column="28"/>
+      </Position>
+      <Position>
+        <Filename Value="game\ugameserver.pas"/>
+        <Caret Line="22" Column="58"/>
+      </Position>
+      <Position>
+        <Filename Value="util\ulog.pas"/>
+        <Caret Line="61" Column="17" TopLine="40"/>
+      </Position>
+      <Position>
+        <Filename Value="util\ulog.pas"/>
+        <Caret Line="67" Column="14" TopLine="36"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>

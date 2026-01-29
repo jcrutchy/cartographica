@@ -1,0 +1,70 @@
+object MainForm: TMainForm
+  Left = -4
+  Height = 1000
+  Top = 0
+  Width = 952
+  Caption = 'Cortex'
+  ClientHeight = 1000
+  ClientWidth = 952
+  LCLVersion = '4.2.0.0'
+  OnClose = FormClose
+  OnCreate = FormCreate
+  object CortexMemo: TMemo
+    Left = 0
+    Height = 900
+    Top = 50
+    Width = 408
+    Align = alClient
+    Color = clBtnFace
+    Font.Height = -13
+    Font.Name = 'Consolas'
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 0
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 952
+    Align = alTop
+    TabOrder = 1
+  end
+  object Panel2: TPanel
+    Left = 0
+    Height = 50
+    Top = 950
+    Width = 952
+    Align = alBottom
+    TabOrder = 2
+  end
+  object BridgeMemo: TMemo
+    Left = 413
+    Height = 900
+    Top = 50
+    Width = 539
+    Align = alRight
+    Color = clBtnFace
+    Font.Height = -13
+    Font.Name = 'Consolas'
+    ParentFont = False
+    ReadOnly = True
+    TabOrder = 3
+  end
+  object Splitter1: TSplitter
+    Left = 408
+    Height = 900
+    Top = 50
+    Width = 5
+    Align = alRight
+    MinSize = 200
+    ResizeAnchor = akRight
+  end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 500
+    OnTimer = Timer1Timer
+    Left = 424
+    Top = 8
+  end
+end

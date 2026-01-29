@@ -1,0 +1,6 @@
+{
+  "features": [
+    {"name": "npc.x", "min": 0, "max": 1000},
+    {"name": "npc.y", "min": 0, "max": 1000}
+  ]
+}
