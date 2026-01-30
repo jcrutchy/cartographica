@@ -94,8 +94,17 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #1a1a1a;
 }
 
-.ui-panel {
-    position: absolute;
-    z-index: 10;
-    pointer-events: auto;
+#debug-panel {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-family: monospace;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    display: none;
+    z-index: 9998;
 }

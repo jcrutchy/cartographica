@@ -6,10 +6,6 @@ import {
     showLoadWorldMenu
 } from "./menu.js";
 
-import { generateIsland } from "./world/generate.js";
-import { World } from "./world/world.js";
-
-let world = null;
 let conn = null;
 
 window.addEventListener("load", onWindowLoad);
@@ -69,51 +65,3 @@ function handleWorldData(msg) {
 function handleSocketError(err) {
     showError("Connection error.");
 }
-
-// ---------------------------------------------------------------------------
-//  World Startup
-// ---------------------------------------------------------------------------
-
-/*async function startWorld(worldData) {
-    const root = document.getElementById("menu-root");
-
-    clearError();
-
-    world = new World(worldData);
-    world.start();
-}
-
-window.startNewWorld = function(graphType)
-{
-    const seed = Date.now() & 0xffffffff;
-
-    const root = document.getElementById("menu-root");
-    root.style.display = "flex";
-    root.innerHTML = "<div class='loading'>Generating world...</div>";
-
-    worldgenWorker.onmessage = function(ev) {
-        const root = document.getElementById("menu-root");
-        root.style.display = "none";
-        const { worldData } = ev.data;
-        startWorld(worldData);
-    };
-
-    worldgenWorker.postMessage({ seed, graphType });
-};*/
-
-
-window.startNewWorld = function (graphType) {
-
-    const root = document.getElementById("menu-root");
-    root.style.display = "none";
-
-    const canvas = document.getElementById("game");
-    canvas.style.display = "block";
-
-    // Generate new tilemap island
-    const worldData = generateIsland();
-
-    // Start the world
-    world = new World(worldData);
-    world.start();
-};

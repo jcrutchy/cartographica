@@ -1,6 +1,19 @@
-// world/generate.js
 
-export function generateIsland(width = 256, height = 256) {
+import { worldData } from "./worldData.js";
+
+export function generateWorld()
+{
+    for (let i = 0; i < worldData.islands.length; i++)
+    {
+        worldData.islands[i] = generateIsland(worldData.islands[i]);
+    }
+    return worldData;
+}
+
+export function generateIsland(island)
+{
+    let width = island.width;
+    let height = island.height;
     // ------------------------------------------------------------
     // Base arrays
     // ------------------------------------------------------------
@@ -86,7 +99,9 @@ export function generateIsland(width = 256, height = 256) {
     // ------------------------------------------------------------
     carveRivers(tiles, elevation, width, height);
 
-    return { width, height, tiles };
+    island.tiles = tiles;
+
+    return island;
 }
 
 // ------------------------------------------------------------

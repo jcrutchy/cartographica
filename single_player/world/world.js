@@ -1,5 +1,3 @@
-// world/world.js
-
 import { Camera } from "./camera.js";
 import { Renderer } from "./renderer.js";
 import { TILE_WIDTH, TILE_HEIGHT } from "./constants.js";
@@ -17,12 +15,17 @@ export class World {
             this.data
         );
 
-        // Center camera on world middle in ISO space
-        const midX = this.data.width / 2;
-        const midY = this.data.height / 2;
+        const first = this.data.islands[0];
 
-        const isoX = (midX - midY) * (TILE_WIDTH / 2);
-        const isoY = (midX + midY) * (TILE_HEIGHT / 2);
+        console.log(first);
+
+        const centerTileX = first.originX + first.width / 2;
+        const centerTileY = first.originY + first.height / 2;
+        
+        const isoX = (centerTileX - centerTileY) * (TILE_WIDTH / 2);
+        const isoY = (centerTileX + centerTileY) * (TILE_HEIGHT / 2);
+
+        console.log("center on: "+isoX+", "+isoY);
 
         this.camera.centerOn(isoX, isoY);
     }
