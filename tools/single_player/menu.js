@@ -1,5 +1,8 @@
 
 export function showMainMenu() {
+    const canvas = document.getElementById("game");
+    canvas.style.display = "none";
+
     const root = document.getElementById("menu-root");
     root.style.display = "flex";
     root.innerHTML = "";
@@ -27,6 +30,9 @@ export function showMainMenu() {
 // ---------------------------------------------------------------------------
 
 export function showNewWorldMenu() {
+    const canvas = document.getElementById("game");
+    canvas.style.display = "none";
+
     const root = document.getElementById("menu-root");
     root.style.display = "flex";
     root.innerHTML = "";
@@ -65,6 +71,9 @@ export function showNewWorldMenu() {
 // ---------------------------------------------------------------------------
 
 export function showLoadWorldMenu(worlds) {
+    const canvas = document.getElementById("game");
+    canvas.style.display = "none";
+
     const root = document.getElementById("menu-root");
     root.style.display = "flex";
     root.innerHTML = "";
@@ -102,6 +111,9 @@ export function showLoadWorldMenu(worlds) {
 // ---------------------------------------------------------------------------
 
 export function showOptionsMenu() {
+    const canvas = document.getElementById("game");
+    canvas.style.display = "none";
+
     const root = document.getElementById("menu-root");
     root.style.display = "flex";
     root.innerHTML = "";

@@ -103,9 +103,12 @@ window.startNewWorld = function(graphType)
 
 
 window.startNewWorld = function (graphType) {
-    // Hide menu
+
     const root = document.getElementById("menu-root");
     root.style.display = "none";
+
+    const canvas = document.getElementById("game");
+    canvas.style.display = "block";
 
     // Generate new tilemap island
     const worldData = generateIsland();

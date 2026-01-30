@@ -84,13 +84,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 #game {
-    display: block;
+    display: none;
     width: 100vw;
     height: 100vh;
     position: absolute;
     top: 0;
     left: 0;
     z-index: 1;
+    background-color: #1a1a1a;
 }
 
 .ui-panel {
