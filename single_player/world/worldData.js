@@ -1,4 +1,3 @@
-
 export const worldData = {
     islands: [
         {
@@ -8,6 +7,7 @@ export const worldData = {
             width: 28,
             height: 36,
             tiles: null,
+            connections: ["B", "C"]
         },
         {
             id: "B",
@@ -16,6 +16,7 @@ export const worldData = {
             width: 41,
             height: 15,
             tiles: null,
+            connections: ["A", "D"]
         },
         {
             id: "C",
@@ -24,6 +25,7 @@ export const worldData = {
             width: 12,
             height: 27,
             tiles: null,
+            connections: ["A", "D"]
         },
         {
             id: "D",
@@ -32,6 +34,7 @@ export const worldData = {
             width: 45,
             height: 31,
             tiles: null,
+            connections: ["B", "C"]
         },
     ]
 };

@@ -6,9 +6,11 @@ export class Renderer {
         this.ctx = canvas.getContext("2d");
         this.camera = camera;
         this.world = world;
-
+      
         this.debugDrawChunkBoundaries = true;
+        this.debugDrawChunkDiamonds = true;
         this.debugDrawIslandBounds = true;
+        this.debugDrawGrids = false;
 
         this.chunkCache = new Map();
 
@@ -19,30 +21,7 @@ export class Renderer {
         }
 
         this._setupResize();
-    }
-
-    _setupResize() {
-        const resize = () => {
-            const dpr = window.devicePixelRatio || 1;
-            this.canvas.width = window.innerWidth * dpr;
-            this.canvas.height = window.innerHeight * dpr;
-            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        };
-        window.addEventListener("resize", resize);
-        resize();
-    }
-
-    _chunkKey(island, cx, cy) {
-        return `${island.id}:${cx},${cy}`;
-    }
-
-    _getOrCreateChunkBitmap(island, cx, cy) {
-        const key = this._chunkKey(island, cx, cy);
-        if (this.chunkCache.has(key)) return this.chunkCache.get(key);
-
-        const bitmap = this._renderChunk(island, cx, cy);
-        this.chunkCache.set(key, bitmap);
-        return bitmap;
+        this._setupMouseMove();
     }
 
     _getTile(worldX, worldY) {
@@ -61,45 +40,146 @@ export class Renderer {
         return null;
     }
 
-    _renderChunk(island, cx, cy) {
+    _setupMouseMove() {
+        const mouseMove = (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const sx = e.clientX - rect.left;
+            const sy = e.clientY - rect.top;
+    
+            const world = this.screenToWorldTile(sx, sy);
+    
+            this.hoverTile = {
+                x: Math.round(world.x),
+                y: Math.round(world.y)
+            };
+        };
+    
+        window.addEventListener("mousemove", mouseMove);
+    }
+
+    _setupResize() {
+        const resize = () => {
+            const dpr = window.devicePixelRatio || 1;
+            this.canvas.width = window.innerWidth * dpr;
+            this.canvas.height = window.innerHeight * dpr;
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+        window.addEventListener("resize", resize);
+        resize();
+    }
+
+    _getOrCreateChunkBitmap(island, cx, cy) {
+        const key = `${island.id}:${cx},${cy}`;
+        let canvas = this.chunkCache.get(key);
+        if (canvas) return canvas;
+    
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
-
-        const PAD_X = tw / 2;
-        const PAD_Y = th / 2;
-
-        const chunkPixelW = CHUNK_SIZE * tw + tw;
-        const chunkPixelH = CHUNK_SIZE * th + th;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = chunkPixelW;
-        canvas.height = chunkPixelH;
-
+    
+        // For now: simple, explicit size – one tile grid worth.
+        // (We can tighten this later once everything lines up.)
+        const width = CHUNK_SIZE * tw;
+        const height = CHUNK_SIZE * th;
+    
+        canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+    
         const ctx = canvas.getContext("2d");
-
-        const originX = PAD_X + (CHUNK_SIZE - 1) * (tw / 2);
-        const originY = PAD_Y;
-
-        // Per-island world-space chunk origin
+    
+        // Choose an origin inside the chunk bitmap.
+        // For now: top-center-ish so we can see the whole diamond.
+        const originX = width / 2;
+        const originY = th / 2;
+    
         const startX = island.originX + cx * CHUNK_SIZE;
         const startY = island.originY + cy * CHUNK_SIZE;
-
+    
         for (let y = 0; y < CHUNK_SIZE; y++) {
             for (let x = 0; x < CHUNK_SIZE; x++) {
                 const worldX = startX + x;
                 const worldY = startY + y;
-
+    
                 const tile = this._getTile(worldX, worldY);
                 if (!tile) continue;
-
+    
                 const isoX = originX + (x - y) * (tw / 2);
                 const isoY = originY + (x + y) * (th / 2);
-
+    
                 this._drawIsoTileChunk(ctx, tile, isoX, isoY, tw, th);
             }
         }
-
+    
+        this.chunkCache.set(key, canvas);
         return canvas;
+    }
+
+    screenToWorldTile(sx, sy) {
+        const scale = this.camera.scale;
+        const tw = TILE_WIDTH;
+        const th = TILE_HEIGHT;
+    
+        const screenW = this.canvas.width;
+        const screenH = this.canvas.height;
+    
+        // Convert screen → iso space
+        const isoX = (sx - screenW / 2) / scale + this.camera.x;
+        const isoY = (sy - screenH / 2) / scale + this.camera.y;
+    
+        // Convert iso → world tile coordinates
+        const worldX = (isoY / th + isoX / tw);
+        const worldY = (isoY / th - isoX / tw);
+    
+        return { x: worldX, y: worldY };
+    }
+
+    _renderChunk(island, cx, cy) {
+        const chunkCanvas = this._getOrCreateChunkBitmap(island, cx, cy);
+        const scale = this.camera.scale;
+        const ctx = this.ctx;
+    
+        const tw = TILE_WIDTH;
+        const th = TILE_HEIGHT;
+    
+        // World-space chunk origin (tile 0,0 of the chunk)
+        const baseX = island.originX + cx * CHUNK_SIZE;
+        const baseY = island.originY + cy * CHUNK_SIZE;
+    
+        // Use TILE CENTER iso transform
+        const isoX = (baseX - baseY) * (tw / 2);
+        const isoY = (baseX + baseY) * (th / 2);
+    
+        // Inside the bitmap, tile (0,0) CENTER is at (width/2, th/2)
+        const originX = chunkCanvas.width / 2;
+        const originY = th / 2;
+    
+        const screenX =
+            (isoX - this.camera.x) * scale +
+            this.canvas.width / 2 -
+            originX * scale;
+    
+        const screenY =
+            (isoY - this.camera.y) * scale +
+            this.canvas.height / 2 -
+            originY * scale;
+    
+        ctx.drawImage(
+            chunkCanvas,
+            0, 0, chunkCanvas.width, chunkCanvas.height,
+            screenX, screenY,
+            chunkCanvas.width * scale,
+            chunkCanvas.height * scale
+        );
+    
+        if (this.debugDrawChunkBoundaries) {
+            this._debugDrawChunkBoundary(
+                `${island.id}:${cx},${cy}`,
+                screenX,
+                screenY,
+                chunkCanvas.width * scale,
+                chunkCanvas.height * scale
+            );
+        }
     }
 
     _drawIsoTileChunk(ctx, tile, isoCenterX, isoCenterY, w, h) {
@@ -119,35 +199,31 @@ export class Renderer {
         ctx.fill();
     }
 
-    _drawChunkIsoDiamond(island, cx, cy) {
+    _debugDrawChunkIsoBoundary(island, cx, cy) {
         const ctx = this.ctx;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
     
-        // World-space chunk origin (top-left tile of the chunk)
         const baseX = island.originX + cx * CHUNK_SIZE;
         const baseY = island.originY + cy * CHUNK_SIZE;
     
-        // Compute the four tile-corner coordinates of the chunk
         const corners = [
-            { x: baseX,                 y: baseY                 }, // top-left
-            { x: baseX + CHUNK_SIZE,    y: baseY                 }, // top-right
-            { x: baseX + CHUNK_SIZE,    y: baseY + CHUNK_SIZE    }, // bottom-right
-            { x: baseX,                 y: baseY + CHUNK_SIZE    }, // bottom-left
+            { x: baseX,                 y: baseY                 },
+            { x: baseX + CHUNK_SIZE,    y: baseY                 },
+            { x: baseX + CHUNK_SIZE,    y: baseY + CHUNK_SIZE    },
+            { x: baseX,                 y: baseY + CHUNK_SIZE    },
         ].map(pt => {
-            // Convert tile-corner → iso (top corner of tile)
-            const isoX = (pt.x - pt.y) * (tw / 2);
+            // tile-corner → iso (aligned with new chunk origin)
+            const isoX = (pt.x - pt.y) * (tw / 2) - (tw / 2);
             const isoY = (pt.x + pt.y) * (th / 2) - (th / 2);
     
-            // iso → screen
             const screenX = (isoX - this.camera.x) * scale + this.canvas.width / 2;
             const screenY = (isoY - this.camera.y) * scale + this.canvas.height / 2;
     
             return { x: screenX, y: screenY };
         });
     
-        // Draw the diamond
         ctx.strokeStyle = "rgba(0, 255, 0, 0.8)";
         ctx.lineWidth = 2;
     
@@ -160,7 +236,7 @@ export class Renderer {
         ctx.stroke();
     }
 
-    _drawChunkBoundary(label, screenX, screenY, w, h) {
+    _debugDrawChunkBoundary(label, screenX, screenY, w, h) {
         const ctx = this.ctx;
 
         ctx.strokeStyle = "rgba(255, 0, 0, 0.6)";
@@ -177,31 +253,32 @@ export class Renderer {
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
-
+    
         ctx.strokeStyle = "rgba(0, 200, 255, 0.7)";
         ctx.lineWidth = 2;
-
+    
         for (const island of this.world.islands) {
             const x0 = island.originX;
             const y0 = island.originY;
             const x1 = island.originX + island.width;
             const y1 = island.originY + island.height;
-
+    
             const corners = [
                 { x: x0, y: y0 },
                 { x: x1, y: y0 },
                 { x: x1, y: y1 },
                 { x: x0, y: y1 },
             ].map(pt => {
+                // Canonical tile-corner iso transform
                 const isoX = (pt.x - pt.y) * (tw / 2);
                 const isoY = (pt.x + pt.y) * (th / 2) - (th / 2);
-
-                const screenX = (isoX - this.camera.x) * scale + this.canvas.width / 2;
-                const screenY = (isoY - this.camera.y) * scale + this.canvas.height / 2;
-
-                return { x: screenX, y: screenY };
+    
+                return {
+                    x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
+                    y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+                };
             });
-
+    
             ctx.beginPath();
             ctx.moveTo(corners[0].x, corners[0].y);
             ctx.lineTo(corners[1].x, corners[1].y);
@@ -209,10 +286,97 @@ export class Renderer {
             ctx.lineTo(corners[3].x, corners[3].y);
             ctx.closePath();
             ctx.stroke();
+        }
+    }
 
-            ctx.fillStyle = "rgba(0, 200, 255, 0.9)";
-            ctx.font = "12px monospace";
-            ctx.fillText(island.id || "island", corners[0].x + 4, corners[0].y - 6);
+    _drawHoverDiamond(tx, ty) {
+        const ctx = this.ctx;
+        const tw = TILE_WIDTH;
+        const th = TILE_HEIGHT;
+        const scale = this.camera.scale;
+    
+        // Tile center in iso space
+        const isoCenterX = (tx - ty) * (tw / 2);
+        const isoCenterY = (tx + ty) * (th / 2);
+    
+        // Tile corners
+        const leftX   = isoCenterX - tw / 2;
+        const rightX  = isoCenterX + tw / 2;
+        const topY    = isoCenterY - th / 2;
+        const bottomY = isoCenterY + th / 2;
+    
+        // Convert to screen
+        const sx = x => (x - this.camera.x) * scale + this.canvas.width / 2;
+        const sy = y => (y - this.camera.y) * scale + this.canvas.height / 2;
+    
+        ctx.strokeStyle = "rgba(255, 230, 120, 0.8)";
+        ctx.lineWidth = 2;
+    
+        ctx.beginPath();
+        ctx.moveTo(sx(leftX),        sy(isoCenterY));
+        ctx.lineTo(sx(isoCenterX),   sy(topY));
+        ctx.lineTo(sx(rightX),       sy(isoCenterY));
+        ctx.lineTo(sx(isoCenterX),   sy(bottomY));
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    _debugDrawIsoGrid() {
+        const ctx = this.ctx;
+        const tw = TILE_WIDTH;
+        const th = TILE_HEIGHT;
+        const scale = this.camera.scale;
+    
+        const screenW = this.canvas.width;
+        const screenH = this.canvas.height;
+    
+        // Convert screen → world tile space
+        const toWorld = (sx, sy) => {
+            const isoX = (sx - screenW / 2) / scale + this.camera.x;
+            const isoY = (sy - screenH / 2) / scale + this.camera.y;
+    
+            const x = (isoY / th + isoX / tw);
+            const y = (isoY / th - isoX / tw);
+            return { x, y };
+        };
+    
+        const tl = toWorld(0, 0);
+        const br = toWorld(screenW, screenH);
+    
+        const minX = Math.floor(Math.min(tl.x, br.x)) - 2;
+        const maxX = Math.ceil(Math.max(tl.x, br.x)) + 2;
+        const minY = Math.floor(Math.min(tl.y, br.y)) - 2;
+        const maxY = Math.ceil(Math.max(tl.y, br.y)) + 2;
+    
+        ctx.strokeStyle = "rgba(0, 200, 0, 0.20)";
+        ctx.lineWidth = 1;
+    
+        // Draw a diamond for each tile
+        for (let ty = minY; ty <= maxY; ty++) {
+            for (let tx = minX; tx <= maxX; tx++) {
+    
+                // Tile center in iso space
+                const isoCenterX = (tx - ty) * (tw / 2);
+                const isoCenterY = (tx + ty) * (th / 2);
+    
+                // Tile corners
+                const leftX   = isoCenterX - tw / 2;
+                const rightX  = isoCenterX + tw / 2;
+                const topY    = isoCenterY - th / 2;
+                const bottomY = isoCenterY + th / 2;
+    
+                // Convert to screen
+                const sx = x => (x - this.camera.x) * scale + screenW / 2;
+                const sy = y => (y - this.camera.y) * scale + screenH / 2;
+    
+                ctx.beginPath();
+                ctx.moveTo(sx(leftX),        sy(isoCenterY));
+                ctx.lineTo(sx(isoCenterX),   sy(topY));
+                ctx.lineTo(sx(rightX),       sy(isoCenterY));
+                ctx.lineTo(sx(isoCenterX),   sy(bottomY));
+                ctx.closePath();
+                ctx.stroke();
+            }
         }
     }
 
@@ -229,115 +393,94 @@ export class Renderer {
         }
         const megaPixels = (totalPixels / 1_000_000).toFixed(2);
 
-        panel.textContent =
-            `Chunks loaded: ${chunkCount}\n` +
-            `Zoom: ${zoom}\n` +
+        panel.innerHTML =
+            `Chunks loaded: ${chunkCount}<br>` +
+            `Zoom: ${zoom}<br>` +
             `Pixels: ${megaPixels} MP`;
+    }
+
+    _getIslandCenterIso(island) {
+        const tw = TILE_WIDTH;
+        const th = TILE_HEIGHT;
+    
+        const centerX = island.originX + island.width / 2;
+        const centerY = island.originY + island.height / 2;
+    
+        const isoX = (centerX - centerY) * (tw / 2);
+        const isoY = (centerX + centerY) * (th / 2);
+    
+        return { isoX, isoY };
     }
 
     _drawIslandConnections() {
         const ctx = this.ctx;
-        const tw = TILE_WIDTH;
-        const th = TILE_HEIGHT;
         const scale = this.camera.scale;
     
-        ctx.strokeStyle = "rgba(255, 215, 0, 0.9)"; // gold-ish
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(120, 80, 160, 0.6)";   // dark purple
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "rgba(120, 80, 160, 0.8)";
     
-        // Compute screen-space centers for each island
-        const centers = this.world.islands.map(island => {
-            const centerTileX = island.originX + island.width / 2;
-            const centerTileY = island.originY + island.height / 2;
+        for (const island of this.world.islands) {
+            const a = this._getIslandCenterIso(island);
     
-            // world → iso
-            const isoX = (centerTileX - centerTileY) * (tw / 2);
-            const isoY = (centerTileX + centerTileY) * (th / 2);
+            for (const targetId of island.connections || []) {
+                const target = this.world.islands.find(i => i.id === targetId);
+                if (!target) continue;
     
-            // iso → screen
-            const screenX = (isoX - this.camera.x) * scale + this.canvas.width / 2;
-            const screenY = (isoY - this.camera.y) * scale + this.canvas.height / 2;
+                const b = this._getIslandCenterIso(target);
     
-            return { x: screenX, y: screenY };
-        });
+                // Convert to screen
+                const ax = (a.isoX - this.camera.x) * scale + this.canvas.width / 2;
+                const ay = (a.isoY - this.camera.y) * scale + this.canvas.height / 2;
+                const bx = (b.isoX - this.camera.x) * scale + this.canvas.width / 2;
+                const by = (b.isoY - this.camera.y) * scale + this.canvas.height / 2;
     
-        // Draw lines between every pair of islands
-        for (let i = 0; i < centers.length; i++) {
-            for (let j = i + 1; j < centers.length; j++) {
                 ctx.beginPath();
-                ctx.moveTo(centers[i].x, centers[i].y);
-                ctx.lineTo(centers[j].x, centers[j].y);
+                ctx.moveTo(ax, ay);
+                ctx.lineTo(bx, by);
                 ctx.stroke();
             }
         }
+    
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
     }
 
-    draw() {
+    draw()
+    {
         const ctx = this.ctx;
-
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const tw = TILE_WIDTH;
-        const th = TILE_HEIGHT;
+        //var exit_loops = false;
 
-        const PAD_X = tw / 2;
-        const PAD_Y = th / 2;
+        for (const island of this.world.islands)
+        {
+            for (let cy = 0; cy < island.chunksY; cy++)
+            {
+                for (let cx = 0; cx < island.chunksX; cx++)
+                {
+                    this._renderChunk(island, cx, cy);
 
-        const chunkPixelW = CHUNK_SIZE * tw + tw;
-        const chunkPixelH = CHUNK_SIZE * th + th;
-
-        const originX = PAD_X + (CHUNK_SIZE - 1) * (tw / 2);
-        const originY = PAD_Y;
-
-        // Per-island chunk rendering
-        for (const island of this.world.islands) {
-            for (let cy = 0; cy < island.chunksY; cy++) {
-                for (let cx = 0; cx < island.chunksX; cx++) {
-
-                    const chunkCanvas = this._getOrCreateChunkBitmap(island, cx, cy);
-                    if (!chunkCanvas) continue;
-
-                    const baseX = island.originX + cx * CHUNK_SIZE;
-                    const baseY = island.originY + cy * CHUNK_SIZE;
-
-                    const chunkIsoX = (baseX - baseY) * (tw / 2);
-                    const chunkIsoY = (baseX + baseY) * (th / 2);
-
-                    const topLeftIsoX = chunkIsoX - originX;
-                    const topLeftIsoY = chunkIsoY - originY;
-
-                    const screen = this.camera.worldToScreen(
-                        topLeftIsoX,
-                        topLeftIsoY,
-                        this.canvas
-                    );
-
-                    ctx.drawImage(
-                        chunkCanvas,
-                        screen.x,
-                        screen.y,
-                        chunkPixelW * this.camera.scale,
-                        chunkPixelH * this.camera.scale
-                    );
-
-                    if (this.debugDrawChunkBoundaries) {
-                        this._drawChunkBoundary(
-                            `${island.id}:${cx},${cy}`,
-                            screen.x,
-                            screen.y,
-                            chunkPixelW * this.camera.scale,
-                            chunkPixelH * this.camera.scale
-                        );
-                        this._drawChunkIsoDiamond(island, cx, cy);
-                    }
+                    //exit_loops = true; break;
                 }
+                //if (exit_loops) break;
             }
+            //if (exit_loops) break;
         }
 
         if (this.debugDrawIslandBounds) {
             this._drawIslandBounds();
         }
-
+        if (this.debugDrawGrids) {
+            this._debugDrawIsoGrid();
+        }
         this._drawIslandConnections();
+
+        if (this.hoverTile) {
+            this._drawHoverDiamond(this.hoverTile.x, this.hoverTile.y);
+        }
+
         this._updateDebugPanel();
     }
 }
