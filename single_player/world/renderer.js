@@ -9,6 +9,7 @@ export class Renderer {
       
         this.debugDrawChunkBoundaries = true;
         this.debugDrawChunkDiamonds = true;
+        this.debugDrawChunkDiamonds = true;
         this.debugDrawIslandBounds = true;
         this.debugDrawGrids = false;
 
@@ -180,6 +181,9 @@ export class Renderer {
                 chunkCanvas.height * scale
             );
         }
+        if (this.debugDrawChunkDiamonds) {
+            this._debugDrawChunkDiamondBoundary(island, cx, cy);
+        }
     }
 
     _drawIsoTileChunk(ctx, tile, isoCenterX, isoCenterY, w, h) {
@@ -199,39 +203,46 @@ export class Renderer {
         ctx.fill();
     }
 
-    _debugDrawChunkIsoBoundary(island, cx, cy) {
+    _debugDrawChunkDiamondBoundary(island, cx, cy) {
         const ctx = this.ctx;
+        const scale = this.camera.scale;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
-        const scale = this.camera.scale;
     
+        // Chunk world origin (tile 0,0 of this chunk)
         const baseX = island.originX + cx * CHUNK_SIZE;
         const baseY = island.originY + cy * CHUNK_SIZE;
     
-        const corners = [
-            { x: baseX,                 y: baseY                 },
-            { x: baseX + CHUNK_SIZE,    y: baseY                 },
-            { x: baseX + CHUNK_SIZE,    y: baseY + CHUNK_SIZE    },
-            { x: baseX,                 y: baseY + CHUNK_SIZE    },
-        ].map(pt => {
-            // tile-corner → iso (aligned with new chunk origin)
-            const isoX = (pt.x - pt.y) * (tw / 2) - (tw / 2);
-            const isoY = (pt.x + pt.y) * (th / 2) - (th / 2);
+        // Four corners of the chunk in tile space
+        const TL = { x: baseX,                 y: baseY };
+        const TR = { x: baseX + CHUNK_SIZE,    y: baseY };
+        const BR = { x: baseX + CHUNK_SIZE,    y: baseY + CHUNK_SIZE };
+        const BL = { x: baseX,                 y: baseY + CHUNK_SIZE };
     
-            const screenX = (isoX - this.camera.x) * scale + this.canvas.width / 2;
-            const screenY = (isoY - this.camera.y) * scale + this.canvas.height / 2;
+        // Convert tile → iso → screen
+        const toScreen = (tx, ty) => {
+            const isoX = (tx - ty) * (tw / 2);
+            const isoY = (tx + ty) * (th / 2) - (th / 2);
     
-            return { x: screenX, y: screenY };
-        });
+            return {
+                x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
+                y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+            };
+        };
     
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.8)";
+        const pTL = toScreen(TL.x, TL.y);
+        const pTR = toScreen(TR.x, TR.y);
+        const pBR = toScreen(BR.x, BR.y);
+        const pBL = toScreen(BL.x, BL.y);
+    
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; // green
         ctx.lineWidth = 2;
     
         ctx.beginPath();
-        ctx.moveTo(corners[0].x, corners[0].y);
-        ctx.lineTo(corners[1].x, corners[1].y);
-        ctx.lineTo(corners[2].x, corners[2].y);
-        ctx.lineTo(corners[3].x, corners[3].y);
+        ctx.moveTo(pTL.x, pTL.y);
+        ctx.lineTo(pTR.x, pTR.y);
+        ctx.lineTo(pBR.x, pBR.y);
+        ctx.lineTo(pBL.x, pBL.y);
         ctx.closePath();
         ctx.stroke();
     }
