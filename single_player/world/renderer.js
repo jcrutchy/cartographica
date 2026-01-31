@@ -163,7 +163,21 @@ export class Renderer {
             (isoY - this.camera.y) * scale +
             this.canvas.height / 2 -
             originY * scale;
-    
+
+        const screenW = chunkCanvas.width * scale;
+        const screenH = chunkCanvas.height * scale;
+
+        // CHUNK CULLING
+        const viewX = 0;
+        const viewY = 0;
+        const viewW = this.canvas.width;
+        const viewH = this.canvas.height;
+        
+        if (!this._rectsIntersect(screenX, screenY, screenW, screenH, viewX, viewY, viewW, viewH)) {
+            return; // Skip drawing this chunk
+        }
+        this.debugChunksRendered++;
+
         ctx.drawImage(
             chunkCanvas,
             0, 0, chunkCanvas.width, chunkCanvas.height,
@@ -391,12 +405,22 @@ export class Renderer {
         }
     }
 
+    _rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+        return (
+            ax < bx + bw &&
+            ax + aw > bx &&
+            ay < by + bh &&
+            ay + ah > by
+        );
+    }
+
     _updateDebugPanel() {
         const panel = document.getElementById("debug-panel");
         if (!panel) return;
 
         const chunkCount = this.chunkCache.size;
         const zoom = this.camera.scale.toFixed(3);
+        const chunksRendered = this.debugChunksRendered;
 
         let totalPixels = 0;
         for (const canvas of this.chunkCache.values()) {
@@ -406,6 +430,7 @@ export class Renderer {
 
         panel.innerHTML =
             `Chunks loaded: ${chunkCount}<br>` +
+            `Chunks rendered: ${chunksRendered}<br>` +
             `Zoom: ${zoom}<br>` +
             `Pixels: ${megaPixels} MP`;
     }
@@ -460,6 +485,7 @@ export class Renderer {
 
     draw()
     {
+        this.debugChunksRendered = 0;
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
