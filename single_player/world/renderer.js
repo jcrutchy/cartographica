@@ -1,4 +1,13 @@
-import { TILE_WIDTH, TILE_HEIGHT, CHUNK_SIZE, TILE_COLORS } from "./constants.js";
+import { TILE_WIDTH, TILE_HEIGHT, TILE_COLORS } from "./constants.js";
+
+const CHUNK_SIZE = 16;
+
+const LOD_LEVELS = [
+    { id: 0, chunkSize: 16, minScale: 0.5 },
+    { id: 1, chunkSize: 32, minScale: 0.2 },
+    { id: 2, chunkSize: 64, minScale: 0.05 },
+    { id: 3, chunkSize: 128, minScale: 0.0 }
+];
 
 export class Renderer {
     constructor(canvas, camera, world) {
@@ -73,8 +82,18 @@ export class Renderer {
         resize();
     }
 
+    _getActiveLOD() {
+        return LOD_LEVELS[0]; // fix LOD while setting up rest of multi-res chunking
+        const s = this.camera.scale;
+        for (const lod of LOD_LEVELS) {
+            if (s >= lod.minScale) return lod;
+        }
+        return LOD_LEVELS[LOD_LEVELS.length - 1];
+    }
+
     _getOrCreateChunkBitmap(island, cx, cy) {
-        const key = `${island.id}:${cx},${cy}`;
+        const lod = this._getActiveLOD();
+        const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
         let entry = this.chunkCache.get(key);
 
         if (entry) {
@@ -128,11 +147,11 @@ export class Renderer {
         const cache = this.chunkCache;
     
         const now = performance.now();
-        const gracePeriod = 10000; // 10 seconds
+        const gracePeriod = 5000; // 5 seconds
         const maxEvictionsPerFrame = 1;
     
         // Proximity factor: how many screen-widths/heights define the "safe zone"
-        const nrProxFact = 3;
+        const nrProxFact = 2;
     
         const entries = [...cache.entries()].map(([key, entry]) => ({
             key,
@@ -244,7 +263,8 @@ export class Renderer {
         const screenH = CHUNK_PIXEL_HEIGHT * scale;
     
         // Update rect in cache entry if it exists
-        const key = `${island.id}:${cx},${cy}`;
+        const lod = this._getActiveLOD();
+        const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
         const entry = this.chunkCache.get(key);
         if (entry) {
             entry.screenX = screenX;
@@ -254,7 +274,7 @@ export class Renderer {
         }
 
         // CULL BEFORE CREATING BITMAP
-        const warmProxFactor = 3;
+        const warmProxFactor = 2;
         if (!this._rectsIntersect(screenX, screenY, screenW, screenH,
                                   0, 0, this.canvas.width, this.canvas.height)) {
             // Warm nearby chunks

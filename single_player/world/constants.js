@@ -1,6 +1,5 @@
 export const TILE_WIDTH = 96;
 export const TILE_HEIGHT = 48;
-export const CHUNK_SIZE = 24;
 
 export const TILE_COLORS = {
     water:      "#3a6ea5",
