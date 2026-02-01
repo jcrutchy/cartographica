@@ -20,7 +20,7 @@ export const worldData = {
         },
         {
             id: "C",
-            originX: 100,
+            originX: -200,
             originY: 400,
             width: 250,
             height: 180,
@@ -29,8 +29,8 @@ export const worldData = {
         },
         {
             id: "D",
-            originX: 500,
-            originY: 350,
+            originX: 0,
+            originY: 1000,
             width: 300,
             height: 300,
             tiles: null,
@@ -38,8 +38,8 @@ export const worldData = {
         },
         {
             id: "E",
-            originX: 800,
-            originY: 100,
+            originX: 1300,
+            originY: 0,
             width: 220,
             height: 260,
             tiles: null,

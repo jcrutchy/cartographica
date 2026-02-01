@@ -17,15 +17,11 @@ export class World {
 
         const first = this.data.islands[0];
 
-        console.log(first);
-
         const centerTileX = first.originX + first.width / 2;
         const centerTileY = first.originY + first.height / 2;
         
         const isoX = (centerTileX - centerTileY) * (TILE_WIDTH / 2);
         const isoY = (centerTileX + centerTileY) * (TILE_HEIGHT / 2);
-
-        console.log("center on: "+isoX+", "+isoY);
 
         this.camera.centerOn(isoX, isoY);
     }

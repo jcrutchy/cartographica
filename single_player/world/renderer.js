@@ -9,15 +9,11 @@ export class Renderer {
       
         this.debugDrawChunkBoundaries = false;
         this.debugDrawChunkDiamonds = false;
-        this.debugDrawChunkDiamonds = false;
-        this.debugDrawIslandBounds = false;
+        this.debugDrawIslandBounds = true;
         this.debugDrawGrids = false;
-        
-        this.maxChunkCacheSize = 512;
 
         this.debugChunksRendered = 0;
         this.debugChunksCached = 0;
-        this.debugChunksEvicted = 0;
 
         this.chunkCache = new Map();
 
@@ -117,83 +113,75 @@ export class Renderer {
                 this._drawIsoTileChunk(ctx, tile, isoX, isoY, tw, th);
             }
         }
-    
         this.chunkCache.set(key, {
             canvas,
-            lastUsed: 0,      // will be set on first render
+            lastUsed: 0,
             screenX: 0,
             screenY: 0,
             screenW: canvas.width,
             screenH: canvas.height
         });
-    
         return canvas;
     }
 
     _evictChunks() {
         const cache = this.chunkCache;
+    
         const now = performance.now();
+        const gracePeriod = 10000; // 10 seconds
+        const maxEvictionsPerFrame = 1;
     
-        // Soft limit: only start evicting when above this
-        const softLimit = this.maxChunkCacheSize;
+        // Proximity factor: how many screen-widths/heights define the "safe zone"
+        const nrProxFact = 3;
     
-        // Hard limit: emergency pressure relief (optional)
-        const hardLimit = this.maxChunkCacheSize * 2;
+        const entries = [...cache.entries()].map(([key, entry]) => ({
+            key,
+            entry,
+            age: now - entry.lastUsed
+        }));
     
-        // Nothing to do if under soft limit
-        if (cache.size <= softLimit) {
-            this.debugChunksCached = cache.size;
-            return;
-        }
+        const candidates = entries.filter(e => {
     
-        // Build array of entries with visibility + age info
-        const entries = [];
+            const { entry } = e;
     
-        for (const [key, entry] of cache.entries()) {
-            const age = now - entry.lastUsed;
-    
-            // Determine if chunk is visible (same test as culling)
+            // --- 1. Never evict visible chunks ---
             const visible = this._rectsIntersect(
                 entry.screenX, entry.screenY, entry.screenW, entry.screenH,
                 0, 0, this.canvas.width, this.canvas.height
             );
+            if (visible) return false;
     
-            entries.push({
-                key,
-                entry,
-                age,
-                visible
-            });
-            //console.log("Eviction candidate:", entries[entries.length - 1]);
-        }
+            // --- 2. Proximity protection for ALL chunks (never-rendered or rendered) ---
+            // Define a large "nearby" region around the viewport
+            const near = this._rectsIntersect(
+                entry.screenX, entry.screenY, entry.screenW, entry.screenH,
+                -this.canvas.width * nrProxFact,
+                -this.canvas.height * nrProxFact,
+                this.canvas.width * (nrProxFact * 2 + 1),
+                this.canvas.height * (nrProxFact * 2 + 1)
+            );
+            if (near) return false;
     
-        // Filter eviction candidates:
-        // 1. Not visible
-        // 2. Older than 10 seconds
-        const gracePeriod = 10000; // 10 seconds
-        let candidates = entries.filter(e => !e.visible && e.age > gracePeriod);
+            // --- 3. Never-rendered chunks: allow eviction only if far away ---
+            if (entry.lastUsed === 0) {
+                // If it's far (not near), it's allowed to be evicted
+                return true;
+            }
     
-        // If still above hard limit, allow eviction of ANY non-visible chunks
-        if (cache.size > hardLimit) {
-            candidates = entries.filter(e => !e.visible);
-        }
+            // --- 4. Must exceed grace period ---
+            if (e.age <= gracePeriod) return false;
     
-        // Sort candidates by age (oldest first)
+            // --- 5. Eligible for eviction ---
+            return true;
+        });
+    
+        // Oldest first
         candidates.sort((a, b) => a.age - b.age);
     
-        // How many to remove to get back to soft limit
-        const excess = cache.size - softLimit;
-    
-        const maxEvictionsPerFrame = 8;
-        const targetEvictions = Math.min(excess, maxEvictionsPerFrame);
-        
-        let evicted = 0;
-        
-        for (let i = 0; i < candidates.length && evicted < targetEvictions; i++) {
-            const { key } = candidates[i];
-            //cache.delete(key);
-            //evicted++;
-            this.debugChunksEvicted++;
+        // Evict gently
+        const count = Math.min(maxEvictionsPerFrame, candidates.length);
+        for (let i = 0; i < count; i++) {
+            cache.delete(candidates[i].key);
         }
     
         this.debugChunksCached = cache.size;
@@ -219,7 +207,6 @@ export class Renderer {
     }
 
     _renderChunk(island, cx, cy) {
-        const chunkCanvas = this._getOrCreateChunkBitmap(island, cx, cy);
         const scale = this.camera.scale;
         const ctx = this.ctx;
     
@@ -230,14 +217,19 @@ export class Renderer {
         const baseX = island.originX + cx * CHUNK_SIZE;
         const baseY = island.originY + cy * CHUNK_SIZE;
     
-        // Use TILE CENTER iso transform
+        // TILE CENTER iso transform
         const isoX = (baseX - baseY) * (tw / 2);
         const isoY = (baseX + baseY) * (th / 2);
     
+        // Precomputed chunk pixel footprint
+        const CHUNK_PIXEL_WIDTH  = CHUNK_SIZE * tw;
+        const CHUNK_PIXEL_HEIGHT = CHUNK_SIZE * th;
+    
         // Inside the bitmap, tile (0,0) CENTER is at (width/2, th/2)
-        const originX = chunkCanvas.width / 2;
+        const originX = CHUNK_PIXEL_WIDTH / 2;
         const originY = th / 2;
     
+        // Screen-space placement
         const screenX =
             (isoX - this.camera.x) * scale +
             this.canvas.width / 2 -
@@ -247,11 +239,11 @@ export class Renderer {
             (isoY - this.camera.y) * scale +
             this.canvas.height / 2 -
             originY * scale;
-
-        const screenW = chunkCanvas.width * scale;
-        const screenH = chunkCanvas.height * scale;
-
-        // Update cache entry with screen-space rect for eviction logic
+    
+        const screenW = CHUNK_PIXEL_WIDTH * scale;
+        const screenH = CHUNK_PIXEL_HEIGHT * scale;
+    
+        // Update rect in cache entry if it exists
         const key = `${island.id}:${cx},${cy}`;
         const entry = this.chunkCache.get(key);
         if (entry) {
@@ -261,21 +253,42 @@ export class Renderer {
             entry.screenH = screenH;
         }
 
-        // CHUNK CULLING
-        const viewX = 0;
-        const viewY = 0;
-        const viewW = this.canvas.width;
-        const viewH = this.canvas.height;
-        
-        if (!this._rectsIntersect(screenX, screenY, screenW, screenH, viewX, viewY, viewW, viewH)) {
-            return; // Skip drawing this chunk
+        // CULL BEFORE CREATING BITMAP
+        const warmProxFactor = 3;
+        if (!this._rectsIntersect(screenX, screenY, screenW, screenH,
+                                  0, 0, this.canvas.width, this.canvas.height)) {
+            // Warm nearby chunks
+            const warm = this._rectsIntersect(
+                screenX, screenY, screenW, screenH,
+                -this.canvas.width * warmProxFactor,
+                -this.canvas.height * warmProxFactor,
+                this.canvas.width * (warmProxFactor * 2 + 1),
+                this.canvas.height * (warmProxFactor * 2 + 1)
+            );
+            if (!warm) {
+                return;
+            }
         }
+    
+        // Only now create or fetch the bitmap
+        const chunkCanvas = this._getOrCreateChunkBitmap(island, cx, cy);
+
+        if (!this._rectsIntersect(
+            screenX, screenY, screenW, screenH,
+            0, 0, this.canvas.width, this.canvas.height
+        )) {
+            return;
+        }
+
+        // Update lastUsed now that we know it's visible
+        const realEntry = this.chunkCache.get(key);
+        if (realEntry) {
+            realEntry.lastUsed = performance.now();
+        }
+
         this.debugChunksRendered++;
-
-        if (entry) {
-            entry.lastUsed = performance.now();
-        }
-
+    
+        // Draw chunk
         ctx.drawImage(
             chunkCanvas,
             0, 0, chunkCanvas.width, chunkCanvas.height,
@@ -284,15 +297,17 @@ export class Renderer {
             chunkCanvas.height * scale
         );
     
+        // Debug overlays
         if (this.debugDrawChunkBoundaries) {
             this._debugDrawChunkBoundary(
-                `${island.id}:${cx},${cy}`,
+                key,
                 screenX,
                 screenY,
                 chunkCanvas.width * scale,
                 chunkCanvas.height * scale
             );
         }
+    
         if (this.debugDrawChunkDiamonds) {
             this._debugDrawChunkDiamondBoundary(island, cx, cy);
         }
@@ -409,6 +424,10 @@ export class Renderer {
             ctx.lineTo(corners[3].x, corners[3].y);
             ctx.closePath();
             ctx.stroke();
+
+            ctx.fillStyle = "rgba(0, 200, 255, 0.7)";
+            ctx.font = "14px monospace";
+            ctx.fillText(`island:${island.id}`, corners[0].x + 4, corners[0].y - 3);
         }
     }
 
@@ -432,8 +451,10 @@ export class Renderer {
         const sx = x => (x - this.camera.x) * scale + this.canvas.width / 2;
         const sy = y => (y - this.camera.y) * scale + this.canvas.height / 2;
     
-        ctx.strokeStyle = "rgba(255, 230, 120, 0.8)";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255, 210, 100, 0.8)";
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
     
         ctx.beginPath();
         ctx.moveTo(sx(leftX),        sy(isoCenterY));
@@ -442,6 +463,8 @@ export class Renderer {
         ctx.lineTo(sx(isoCenterX),   sy(bottomY));
         ctx.closePath();
         ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
     }
 
     _debugDrawIsoGrid() {
@@ -519,15 +542,16 @@ export class Renderer {
         const zoom = this.camera.scale.toFixed(3);
 
         let totalPixels = 0;
-        for (const canvas of this.chunkCache.values()) {
-            totalPixels += canvas.width * canvas.height;
+        for (const entry of this.chunkCache.values())
+        {
+            const c = entry.canvas;
+            if (!c) continue; // safety
+            totalPixels += c.width * c.height;
         }
         const megaPixels = (totalPixels / 1_000_000).toFixed(2);
 
         panel.innerHTML =
-            `Chunks evicted: ${this.debugChunksEvicted}<br>` +
             `Chunks cached: ${this.chunkCache.size}<br>` +
-            `Cache soft limit: ${this.maxChunkCacheSize}<br>` +
             `Chunks rendered: ${this.debugChunksRendered}<br>` +
             `Total chunks: ${this.totalChunks}<br>` +
             `Zoom: ${zoom}<br>` +
@@ -585,13 +609,9 @@ export class Renderer {
     draw()
     {
         this.debugChunksRendered = 0;
-        this.debugChunksEvicted = 0;
-
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
         //var exit_loops = false;
-
         for (const island of this.world.islands)
         {
             for (let cy = 0; cy < island.chunksY; cy++)
@@ -599,14 +619,12 @@ export class Renderer {
                 for (let cx = 0; cx < island.chunksX; cx++)
                 {
                     this._renderChunk(island, cx, cy);
-
                     //exit_loops = true; break;
                 }
                 //if (exit_loops) break;
             }
             //if (exit_loops) break;
         }
-
         if (this.debugDrawIslandBounds) {
             this._drawIslandBounds();
         }
@@ -618,7 +636,6 @@ export class Renderer {
         if (this.hoverTile) {
             this._drawHoverDiamond(this.hoverTile.x, this.hoverTile.y);
         }
-
         this._evictChunks();
         this._updateDebugPanel();
     }
