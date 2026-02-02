@@ -3,8 +3,9 @@ import { TILE_WIDTH, TILE_HEIGHT, TILE_COLORS } from "./constants.js";
 const LOD_LEVELS = [
     { id: 0, chunkSize: 16, minScale: 0.5, sampleStep: 1 },
     { id: 1, chunkSize: 32, minScale: 0.2, sampleStep: 2 },
-    { id: 2, chunkSize: 64, minScale: 0.05, sampleStep: 4 },
-    { id: 3, chunkSize: 128, minScale: 0.0, sampleStep: 8 }
+    { id: 2, chunkSize: 64, minScale: 0.08, sampleStep: 4 },
+    { id: 3, chunkSize: 128, minScale: 0.03, sampleStep: 8 },
+    { id: 4, chunkSize: 256, minScale: 0.0,  sampleStep: 16 }
 ];
 
 const MAX_CHUNKS_PER_FRAME = 400; // tune later
@@ -93,7 +94,7 @@ export class Renderer {
     }
 
     _getActiveLOD() {
-        //return LOD_LEVELS[0]; // fix LOD while setting up rest of multi-res chunking
+        return LOD_LEVELS[0]; // fix LOD while setting up rest of multi-res chunking
         const s = this.camera.scale;
         for (const lod of LOD_LEVELS) {
             if (s >= lod.minScale) return lod;
@@ -252,7 +253,7 @@ export class Renderer {
 
     _renderChunk(island, cx, cy) {
         if (this.debugChunksRendered >= MAX_CHUNKS_PER_FRAME) {
-            return;
+            //return;
         }
         const scale = this.camera.scale;
         const ctx = this.ctx;
