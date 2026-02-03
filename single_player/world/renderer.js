@@ -1,14 +1,18 @@
 import { TILE_WIDTH, TILE_HEIGHT, TILE_COLORS } from "./constants.js";
 
 const LOD_LEVELS = [
-    { id: 0, chunkSize: 16, minScale: 0.5, sampleStep: 1 },
-    { id: 1, chunkSize: 32, minScale: 0.2, sampleStep: 2 },
-    { id: 2, chunkSize: 64, minScale: 0.08, sampleStep: 4 },
-    { id: 3, chunkSize: 128, minScale: 0.03, sampleStep: 8 },
-    { id: 4, chunkSize: 256, minScale: 0.0,  sampleStep: 16 }
+    { id: 0, chunkSize: 16,  sampleStep: 1,  enterPx: 200, exitPx: 180 },
+    { id: 1, chunkSize: 24,  sampleStep: 2,  enterPx: 140, exitPx: 120 },
+    { id: 2, chunkSize: 32,  sampleStep: 3,  enterPx: 100, exitPx:  85 },
+    { id: 3, chunkSize: 48,  sampleStep: 4,  enterPx:  70, exitPx:  60 },
+    { id: 4, chunkSize: 64,  sampleStep: 6,  enterPx:  50, exitPx:  42 },
+    { id: 5, chunkSize: 96,  sampleStep: 8,  enterPx:  35, exitPx:  30 },
+    { id: 6, chunkSize: 128, sampleStep: 12, enterPx:  25, exitPx:  20 },
+    { id: 7, chunkSize: 256, sampleStep: 16, enterPx:   0, exitPx:   0 }
 ];
 
 const MAX_CHUNKS_PER_FRAME = 400; // tune later
+const BASE_CHUNK_SIZE = 16;
 
 export class Renderer {
     constructor(canvas, camera, world) {
@@ -17,8 +21,8 @@ export class Renderer {
         this.camera = camera;
         this.world = world;
       
-        this.debugDrawChunkBoundaries = false;
-        this.debugDrawChunkDiamonds = false;
+        this.debugDrawChunkBoundaries = true;
+        this.debugDrawChunkDiamonds = true;
         this.debugDrawIslandBounds = true;
         this.debugDrawGrids = false;
 
@@ -94,11 +98,29 @@ export class Renderer {
     }
 
     _getActiveLOD() {
-        return LOD_LEVELS[0]; // fix LOD while setting up rest of multi-res chunking
-        const s = this.camera.scale;
-        for (const lod of LOD_LEVELS) {
-            if (s >= lod.minScale) return lod;
+        const scale = this.camera.scale;
+        const tw = TILE_WIDTH;
+    
+        // Compute screen-space chunk width for each LOD
+        for (let i = 0; i < LOD_LEVELS.length; i++) {
+            const lod = LOD_LEVELS[i];
+    
+            const chunkPixelWidth = lod.chunkSize * tw * scale;
+    
+            // Hysteresis thresholds
+            const enter = lod.enterPx;
+            const exit  = lod.exitPx;
+    
+            // If we're already in this LOD, use the exit threshold
+            if (this.currentLOD === lod.id) {
+                if (chunkPixelWidth >= exit) return lod;
+            } else {
+                // Otherwise use the enter threshold
+                if (chunkPixelWidth >= enter) return lod;
+            }
         }
+    
+        // Default to the last LOD
         return LOD_LEVELS[LOD_LEVELS.length - 1];
     }
 
@@ -111,21 +133,27 @@ export class Renderer {
 
     _getOrCreateChunkBitmap(island, cx, cy) {
         const lod = this._getActiveLOD();
-        const step = lod.sampleStep;
+        const step = lod.sampleStep; // 1, 2, 4, 8...
         const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
         let entry = this.chunkCache.get(key);
-
+    
         if (entry) {
             return entry.canvas;
         }
     
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
-        
-        const chunkSize = this._getChunkSize();
     
-        const width = chunkSize * tw;
-        const height = chunkSize * th;
+        // How many *world tiles* this chunk covers (unchanged)
+        const chunkSize = this._getChunkSize(); // e.g. 16, 32, 64, 128
+    
+        // How many *LOD tiles* we actually draw in this bitmap
+        // e.g. 16, 16, 16, 16 for step 1,2,4,8 with chunkSize 16,32,64,128
+        const lodTiles = Math.max(1, Math.floor(chunkSize / step));
+    
+        // Bitmap resolution is based on LOD tiles, not full chunkSize
+        const width = lodTiles * tw;
+        const height = lodTiles * th;
     
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -133,30 +161,31 @@ export class Renderer {
     
         const ctx = canvas.getContext("2d");
     
+        // Inside the bitmap, tile (0,0) center is at (width/2, th/2)
         const originX = width / 2;
         const originY = th / 2;
     
+        // World-space start of this chunk (same as before)
         const startX = island.originX + cx * chunkSize;
         const startY = island.originY + cy * chunkSize;
     
-        for (let y = 0; y < chunkSize; y++) {
-            for (let x = 0; x < chunkSize; x++) {
-                const worldX = startX + x;
-                const worldY = startY + y;
-
-                // Snap world coords to the LOD sampling grid
-                const sx = Math.floor(worldX / step) * step;
-                const sy = Math.floor(worldY / step) * step;
-
-                const tile = this._getTile(sx, sy);
+        for (let y = 0; y < lodTiles; y++) {
+            for (let x = 0; x < lodTiles; x++) {
+                // Sample one tile per LOD cell
+                const worldX = startX + x * step;
+                const worldY = startY + y * step;
+    
+                const tile = this._getTile(worldX, worldY);
                 if (!tile) continue;
     
+                // Iso position within the reduced-resolution bitmap
                 const isoX = originX + (x - y) * (tw / 2);
                 const isoY = originY + (x + y) * (th / 2);
     
                 this._drawIsoTileChunk(ctx, tile, isoX, isoY, tw, th);
             }
         }
+    
         this.chunkCache.set(key, {
             canvas,
             lod: lod.id,
@@ -166,6 +195,7 @@ export class Renderer {
             screenW: width,
             screenH: height
         });
+    
         return canvas;
     }
 
@@ -386,20 +416,26 @@ export class Renderer {
         const scale = this.camera.scale;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
+    
+        const lod = this._getActiveLOD();
+        const step = lod.sampleStep;
+    
+        const chunkSize = this._getChunkSize();      // world tiles covered by this chunk
+
+        const lodTiles = Math.ceil(chunkSize / step);
+        const lodExtent = lodTiles * step;
         
-        const chunkSize = this._getChunkSize();
+        const baseX = island.originX + cx * lodExtent;
+        const baseY = island.originY + cy * lodExtent;
     
-        // Chunk world origin (tile 0,0 of this chunk)
-        const baseX = island.originX + cx * chunkSize;
-        const baseY = island.originY + cy * chunkSize;
+        // World-space extent of the LOD footprint
+        const extent = lodTiles * step; // how many world tiles the LOD grid spans
     
-        // Four corners of the chunk in tile space
-        const TL = { x: baseX,                 y: baseY };
-        const TR = { x: baseX + chunkSize,    y: baseY };
-        const BR = { x: baseX + chunkSize,    y: baseY + chunkSize };
-        const BL = { x: baseX,                 y: baseY + chunkSize };
+        const TL = { x: baseX,          y: baseY };
+        const TR = { x: baseX + extent, y: baseY };
+        const BR = { x: baseX + extent, y: baseY + extent };
+        const BL = { x: baseX,          y: baseY + extent };
     
-        // Convert tile → iso → screen
         const toScreen = (tx, ty) => {
             const isoX = (tx - ty) * (tw / 2);
             const isoY = (tx + ty) * (th / 2) - (th / 2);
@@ -415,7 +451,7 @@ export class Renderer {
         const pBR = toScreen(BR.x, BR.y);
         const pBL = toScreen(BL.x, BL.y);
     
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; // green
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
         ctx.lineWidth = 2;
     
         ctx.beginPath();
@@ -448,11 +484,19 @@ export class Renderer {
         ctx.strokeStyle = "rgba(0, 200, 255, 0.7)";
         ctx.lineWidth = 2;
     
+        const lod = this._getActiveLOD();
+        const step = lod.sampleStep;
+    
         for (const island of this.world.islands) {
+    
+            // Snap island extents outward to LOD sampling grid
+            const lodWidth  = Math.ceil(island.width  / step) * step;
+            const lodHeight = Math.ceil(island.height / step) * step;
+    
             const x0 = island.originX;
             const y0 = island.originY;
-            const x1 = island.originX + island.width;
-            const y1 = island.originY + island.height;
+            const x1 = island.originX + lodWidth;
+            const y1 = island.originY + lodHeight;
     
             const corners = [
                 { x: x0, y: y0 },
@@ -460,7 +504,8 @@ export class Renderer {
                 { x: x1, y: y1 },
                 { x: x0, y: y1 },
             ].map(pt => {
-                // Canonical tile-corner iso transform
+    
+                // Tile-corner iso transform (correct for boundaries)
                 const isoX = (pt.x - pt.y) * (tw / 2);
                 const isoY = (pt.x + pt.y) * (th / 2) - (th / 2);
     
@@ -477,7 +522,7 @@ export class Renderer {
             ctx.lineTo(corners[3].x, corners[3].y);
             ctx.closePath();
             ctx.stroke();
-
+    
             ctx.fillStyle = "rgba(0, 200, 255, 0.7)";
             ctx.font = "14px monospace";
             ctx.fillText(`island:${island.id}`, corners[0].x + 4, corners[0].y - 3);
@@ -490,19 +535,33 @@ export class Renderer {
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
     
-        // Tile center in iso space
-        const isoCenterX = (tx - ty) * (tw / 2);
-        const isoCenterY = (tx + ty) * (th / 2);
+        const lod = this._getActiveLOD();
+        const step = lod.sampleStep;
     
-        // Tile corners
-        const leftX   = isoCenterX - tw / 2;
-        const rightX  = isoCenterX + tw / 2;
-        const topY    = isoCenterY - th / 2;
-        const bottomY = isoCenterY + th / 2;
+        // Snap to LOD tile grid
+        const sxTile = Math.floor(tx / step) * step;
+        const syTile = Math.floor(ty / step) * step;
     
-        // Convert to screen
-        const sx = x => (x - this.camera.x) * scale + this.canvas.width / 2;
-        const sy = y => (y - this.camera.y) * scale + this.canvas.height / 2;
+        // LOD tile corners in world space
+        const TL = { x: sxTile,         y: syTile };
+        const TR = { x: sxTile + step,  y: syTile };
+        const BR = { x: sxTile + step,  y: syTile + step };
+        const BL = { x: sxTile,         y: syTile + step };
+    
+        const toScreen = (wx, wy) => {
+            const isoX = (wx - wy) * (tw / 2);
+            const isoY = (wx + wy) * (th / 2) - (th / 2);
+    
+            return {
+                x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
+                y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+            };
+        };
+    
+        const pTL = toScreen(TL.x, TL.y);
+        const pTR = toScreen(TR.x, TR.y);
+        const pBR = toScreen(BR.x, BR.y);
+        const pBL = toScreen(BL.x, BL.y);
     
         ctx.strokeStyle = "rgba(255, 210, 100, 0.8)";
         ctx.lineWidth = 3;
@@ -510,12 +569,13 @@ export class Renderer {
         ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
     
         ctx.beginPath();
-        ctx.moveTo(sx(leftX),        sy(isoCenterY));
-        ctx.lineTo(sx(isoCenterX),   sy(topY));
-        ctx.lineTo(sx(rightX),       sy(isoCenterY));
-        ctx.lineTo(sx(isoCenterX),   sy(bottomY));
+        ctx.moveTo(pTL.x, pTL.y);
+        ctx.lineTo(pTR.x, pTR.y);
+        ctx.lineTo(pBR.x, pBR.y);
+        ctx.lineTo(pBL.x, pBL.y);
         ctx.closePath();
         ctx.stroke();
+    
         ctx.shadowBlur = 0;
         ctx.shadowColor = "transparent";
     }
@@ -684,12 +744,12 @@ export class Renderer {
         this.debugChunksRendered = 0;
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        for (const island of this.world.islands)
-        {
-            for (let cy = 0; cy < island.chunksY; cy++)
-            {
-                for (let cx = 0; cx < island.chunksX; cx++)
-                {
+        const chunkSize = this._getChunkSize();
+        for (const island of this.world.islands) {
+            const lodChunksX = Math.ceil(island.width  / chunkSize);
+            const lodChunksY = Math.ceil(island.height / chunkSize);
+            for (let cy = 0; cy < lodChunksY; cy++) {
+                for (let cx = 0; cx < lodChunksX; cx++) {
                     this._renderChunk(island, cx, cy);
                 }
             }
