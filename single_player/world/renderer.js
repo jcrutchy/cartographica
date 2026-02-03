@@ -47,6 +47,38 @@ export class Renderer {
 
         this._setupResize();
         this._setupMouseMove();
+
+        this.chunkWorker = new Worker("world/chunkWorker.js", { type: "module" });
+        this.chunkWorker.onmessage = (e) => this._onChunkWorkerMessage(e);
+        this.chunkWorker.onerror = (err) => {
+            console.error("Worker error:", err);
+        };
+        this.chunkWorker.onmessageerror = (err) => {
+            console.error("Worker message error:", err);
+        };
+        this.chunkWorker.postMessage({
+            type: "init",
+            TILE_COLORS
+        });
+    }
+
+    _onChunkWorkerMessage(e) {
+        try {
+            //console.log("Renderer got worker message", e.data);
+            const { islandId, cx, cy, lod, bitmap } = e.data;
+            const key = `LOD${lod}:${islandId}:${cx},${cy}`;
+            this.chunkCache.set(key, {
+                bitmap,
+                lastUsed: performance.now(),
+                screenX: 0,
+                screenY: 0,
+                screenW: 0,
+                screenH: 0
+            });
+            this._scheduleDraw();
+        } catch (err) {
+            console.error("Error in _onChunkWorkerMessage:", err);
+        }
     }
 
     _getTile(worldX, worldY) {
@@ -63,6 +95,16 @@ export class Renderer {
             }
         }
         return null;
+    }
+
+    _scheduleDraw() {
+        if (this._drawScheduled) return;
+        this._drawScheduled = true;
+    
+        requestAnimationFrame(() => {
+            this._drawScheduled = false;
+            this.draw();
+        });
     }
 
     _setupMouseMove() {
@@ -132,7 +174,7 @@ export class Renderer {
         return this._getTile(sx, sy);
     }
 
-    _getOrCreateChunkBitmap(island, cx, cy) {
+/*    _getOrCreateChunkBitmap(island, cx, cy) {
         const lod = this._getActiveLOD();
         const step = lod.sampleStep; // 1, 2, 4, 8...
         const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
@@ -198,6 +240,61 @@ export class Renderer {
         });
     
         return canvas;
+    }*/
+    _getOrCreateChunkBitmap(island, cx, cy) {
+        const lod = this._getActiveLOD();
+        const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
+        const entry = this.chunkCache.get(key);
+    
+        if (entry && entry.bitmap) {
+            return entry.bitmap;
+        }
+    
+        // If not present, kick off async generation once
+        if (!entry) {
+            this.chunkCache.set(key, { bitmap: null, lastUsed: performance.now() });
+        
+            const { tileData, lodTiles } = this._sampleChunkTiles(island, cx, cy, lod);
+        
+            this.chunkWorker.postMessage({
+                islandId: island.id,
+                cx,
+                cy,
+                lod: lod.id,
+                chunkSize: lod.chunkSize,
+                step: lod.sampleStep,
+                lodTiles,
+                tileData,
+                tw: TILE_WIDTH,
+                th: TILE_HEIGHT
+            });
+        }
+    
+        // Not ready yet
+        return null;
+    }
+
+    _sampleChunkTiles(island, cx, cy, lod) {
+        const step = lod.sampleStep;
+        const chunkSize = lod.chunkSize;
+    
+        const startX = island.originX + cx * chunkSize;
+        const startY = island.originY + cy * chunkSize;
+    
+        const lodTiles = Math.max(1, Math.floor(chunkSize / step));
+        const tileData = new Array(lodTiles * lodTiles);
+    
+        let i = 0;
+        for (let y = 0; y < lodTiles; y++) {
+            for (let x = 0; x < lodTiles; x++) {
+                const worldX = startX + x * step;
+                const worldY = startY + y * step;
+    
+                tileData[i++] = this._getTile(worldX, worldY);
+            }
+        }
+    
+        return { tileData, lodTiles };
     }
 
     _evictChunks() {
@@ -284,7 +381,7 @@ export class Renderer {
 
     _renderChunk(island, cx, cy) {
         if (this.debugChunksRendered >= MAX_CHUNKS_PER_FRAME) {
-            //return;
+            return;
         }
         const scale = this.camera.scale;
         const ctx = this.ctx;
@@ -354,6 +451,10 @@ export class Renderer {
     
         // Only now create or fetch the bitmap
         const chunkCanvas = this._getOrCreateChunkBitmap(island, cx, cy);
+
+        if (!chunkCanvas) {
+            return; // nothing to draw yet, worker is on it
+        }
 
         if (!this._rectsIntersect(
             screenX, screenY, screenW, screenH,
@@ -671,9 +772,9 @@ export class Renderer {
         let totalPixels = 0;
         for (const entry of this.chunkCache.values())
         {
-            const c = entry.canvas;
-            if (!c) continue; // safety
-            totalPixels += c.width * c.height;
+            const bmp = entry.bitmap;
+            if (!bmp) continue;
+            totalPixels += bmp.width * bmp.height;
         }
         const megaPixels = (totalPixels / 1_000_000).toFixed(2);
         

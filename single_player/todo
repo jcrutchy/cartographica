@@ -1,0 +1,9 @@
+
+if i maximize the browser window, and zoom right in and right out a few times,
+the gpu eventually crashes (i think when zooming in) and then the tilemaps
+don't show up
+
+
+add to debug panel: mouse coords (screen & tile), mouse terrain, mouse island id
+
+
