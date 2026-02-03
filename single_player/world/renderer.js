@@ -1,14 +1,15 @@
 import { TILE_WIDTH, TILE_HEIGHT, TILE_COLORS } from "./constants.js";
 
 const LOD_LEVELS = [
-    { id: 0, chunkSize: 16,  sampleStep: 1,  enterPx: 200, exitPx: 180 },
-    { id: 1, chunkSize: 24,  sampleStep: 2,  enterPx: 140, exitPx: 120 },
-    { id: 2, chunkSize: 32,  sampleStep: 3,  enterPx: 100, exitPx:  85 },
-    { id: 3, chunkSize: 48,  sampleStep: 4,  enterPx:  70, exitPx:  60 },
-    { id: 4, chunkSize: 64,  sampleStep: 6,  enterPx:  50, exitPx:  42 },
-    { id: 5, chunkSize: 96,  sampleStep: 8,  enterPx:  35, exitPx:  30 },
-    { id: 6, chunkSize: 128, sampleStep: 12, enterPx:  25, exitPx:  20 },
-    { id: 7, chunkSize: 256, sampleStep: 16, enterPx:   0, exitPx:   0 }
+    { id: 0, chunkSize: 16,  sampleStep: 1, enterPx: 260, exitPx: 240 },
+    { id: 1, chunkSize: 24,  sampleStep: 1, enterPx: 200, exitPx: 180 }, // new transitional LOD
+    { id: 2, chunkSize: 32,  sampleStep: 2, enterPx: 140, exitPx: 120 },
+    { id: 3, chunkSize: 48,  sampleStep: 3, enterPx: 100, exitPx:  85 },
+    { id: 4, chunkSize: 64,  sampleStep: 4, enterPx:  70, exitPx:  60 },
+    { id: 5, chunkSize: 96,  sampleStep: 6, enterPx:  50, exitPx:  42 },
+    { id: 6, chunkSize: 128, sampleStep: 8, enterPx:  35, exitPx:  30 },
+    { id: 7, chunkSize: 256, sampleStep: 12, enterPx: 25, exitPx: 20 },
+    { id: 8, chunkSize: 384, sampleStep: 16, enterPx: 0, exitPx: 0 }
 ];
 
 const MAX_CHUNKS_PER_FRAME = 400; // tune later
