@@ -55,11 +55,12 @@ export function showNewWorldMenu()
 
 // ---------------------------------------------------------------------------
 
-export function startNewWorld(graphType)
+export async function startNewWorld(graphType)
 {
   showWorldElements();
   const worldData = generateWorld();
   let world = new World(worldData);
+  await world.renderer.init();
   world.start();
 };
 

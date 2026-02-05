@@ -17,6 +17,7 @@ const BASE_CHUNK_SIZE = 16;
 
 export class Renderer {
     constructor(canvas, camera, world) {
+        this.gpuInfo = null;
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
         this.camera = camera;
@@ -29,6 +30,9 @@ export class Renderer {
 
         this.debugChunksRendered = 0;
         this.debugChunksCached = 0;
+
+        this.newChunksThisFrame = 0;
+        this.uploadsThisFrame = 0;
 
         this.chunkCache = new Map();
         
@@ -60,6 +64,40 @@ export class Renderer {
             type: "init",
             TILE_COLORS
         });
+    }
+
+    async init() {
+        this.gpuInfo = await this._estimateGpuTier();
+    }
+
+    async _estimateGpuTier() {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl");
+    
+        if (!gl) return { tier: "low", maxTex: 4096, renderer: "unknown" };
+    
+        const debug = gl.getExtension("WEBGL_debug_renderer_info");
+        const renderer = debug
+            ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
+            : "unknown";
+    
+        const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    
+        let tier;
+        if (maxTex <= 4096) tier = "low";
+        else if (maxTex <= 8192) tier = "mid";
+        else tier = "high";
+    
+        return { tier, maxTex, renderer };
+    }
+
+    _getSafeMpBudget() {
+        switch (this.gpuInfo.tier) {
+            case "low":  return 800;
+            case "mid":  return 1600;
+            case "high": return 2600;
+            default:     return 800;
+        }
     }
 
     _onChunkWorkerMessage(e) {
@@ -174,73 +212,6 @@ export class Renderer {
         return this._getTile(sx, sy);
     }
 
-/*    _getOrCreateChunkBitmap(island, cx, cy) {
-        const lod = this._getActiveLOD();
-        const step = lod.sampleStep; // 1, 2, 4, 8...
-        const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
-        let entry = this.chunkCache.get(key);
-    
-        if (entry) {
-            return entry.canvas;
-        }
-    
-        const tw = TILE_WIDTH;
-        const th = TILE_HEIGHT;
-    
-        // How many *world tiles* this chunk covers (unchanged)
-        const chunkSize = this._getChunkSize(); // e.g. 16, 32, 64, 128
-    
-        // How many *LOD tiles* we actually draw in this bitmap
-        // e.g. 16, 16, 16, 16 for step 1,2,4,8 with chunkSize 16,32,64,128
-        const lodTiles = Math.max(1, Math.floor(chunkSize / step));
-    
-        // Bitmap resolution is based on LOD tiles, not full chunkSize
-        const width = lodTiles * tw;
-        const height = lodTiles * th;
-    
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-    
-        const ctx = canvas.getContext("2d");
-    
-        // Inside the bitmap, tile (0,0) center is at (width/2, th/2)
-        const originX = width / 2;
-        const originY = th / 2;
-    
-        // World-space start of this chunk (same as before)
-        const startX = island.originX + cx * chunkSize;
-        const startY = island.originY + cy * chunkSize;
-    
-        for (let y = 0; y < lodTiles; y++) {
-            for (let x = 0; x < lodTiles; x++) {
-                // Sample one tile per LOD cell
-                const worldX = startX + x * step;
-                const worldY = startY + y * step;
-    
-                const tile = this._getTile(worldX, worldY);
-                if (!tile) continue;
-    
-                // Iso position within the reduced-resolution bitmap
-                const isoX = originX + (x - y) * (tw / 2);
-                const isoY = originY + (x + y) * (th / 2);
-    
-                this._drawIsoTileChunk(ctx, tile, isoX, isoY, tw, th);
-            }
-        }
-    
-        this.chunkCache.set(key, {
-            canvas,
-            lod: lod.id,
-            lastUsed: 0,
-            screenX: 0,
-            screenY: 0,
-            screenW: width,
-            screenH: height
-        });
-    
-        return canvas;
-    }*/
     _getOrCreateChunkBitmap(island, cx, cy) {
         const lod = this._getActiveLOD();
         const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
@@ -268,6 +239,7 @@ export class Renderer {
                 tw: TILE_WIDTH,
                 th: TILE_HEIGHT
             });
+            this.newChunksThisFrame++;
         }
     
         // Not ready yet
@@ -360,6 +332,40 @@ export class Renderer {
         this.debugChunksCached = cache.size;
     }
 
+    _coolOtherLODChunks() {
+        const now = performance.now();
+        const activeLOD = this._getActiveLOD().id;
+    
+        const maxEvict = 2;
+    
+        const candidates = [];
+    
+        for (const [key, entry] of this.chunkCache) {
+            const lodId = parseInt(key.split(":")[0].slice(3), 10);
+            if (lodId === activeLOD) continue;
+            if (!entry.bitmap) continue;
+    
+            const distance = Math.abs(lodId - activeLOD);
+    
+            let grace;
+            if (distance === 1) grace = 12000;      // keep neighbours warm longest
+            else if (distance === 2) grace = 6000;  // mid LODs cool moderately
+            else grace = 2000;                      // far LODs cool quickly
+    
+            if (now - entry.lastUsed < grace) continue;
+    
+            candidates.push(key);
+        }
+    
+        candidates.sort((a, b) =>
+            this.chunkCache.get(a).lastUsed - this.chunkCache.get(b).lastUsed
+        );
+    
+        for (let i = 0; i < Math.min(maxEvict, candidates.length); i++) {
+            this.chunkCache.delete(candidates[i]);
+        }
+    }
+
     screenToWorldTile(sx, sy) {
         const scale = this.camera.scale;
         const tw = TILE_WIDTH;
@@ -380,6 +386,7 @@ export class Renderer {
     }
 
     _renderChunk(island, cx, cy) {
+        this.debugChunksVisited++;
         if (this.debugChunksRendered >= MAX_CHUNKS_PER_FRAME) {
             return;
         }
@@ -777,10 +784,34 @@ export class Renderer {
             totalPixels += bmp.width * bmp.height;
         }
         const megaPixels = (totalPixels / 1_000_000).toFixed(2);
-        
+
+        const lodCounts = {};
+        for (const key of this.chunkCache.keys()) {
+            const lodStr = key.split(":")[0];      // "LOD0"
+            const lodNum = parseInt(lodStr.slice(3), 10); // 0
+            lodCounts[lodNum] = (lodCounts[lodNum] || 0) + 1;
+        }
+        const lodSummary = Object.entries(lodCounts)
+            .map(([lod, count]) => `${lod}:${count}`)
+            .join(" ");
+
         const lod = this._getActiveLOD();
-        
+
         this._trackFPS();
+
+        let minW = Infinity, maxW = 0;
+        let minH = Infinity, maxH = 0;
+        for (const entry of this.chunkCache.values()) {
+            const bmp = entry.bitmap;
+            if (!bmp) continue;
+            minW = Math.min(minW, bmp.width);
+            maxW = Math.max(maxW, bmp.width);
+            minH = Math.min(minH, bmp.height);
+            maxH = Math.max(maxH, bmp.height);
+        }
+
+        const safeMP = this._getSafeMpBudget();
+        const BudgetUsage = (megaPixels / safeMP * 100).toFixed(1);
 
         panel.innerHTML =
             `FPS: ${this.fps.toFixed(0)}<br>` +
@@ -788,9 +819,15 @@ export class Renderer {
             `Chunk size: ${lod.chunkSize}<br>` +
             `Chunks cached: ${this.chunkCache.size}<br>` +
             `Chunks rendered: ${this.debugChunksRendered}<br>` +
+            `Chunks visited: ${this.debugChunksVisited}<br>` +
             `Total chunks: ${this.totalChunks}<br>` +
+            `Bitmap sizes: ${minW}, ${maxW}, ${minH}, ${maxH}<br>` +
+            `LOD cache: ${lodSummary}<br>` +
             `Zoom: ${zoom}<br>` +
-            `Pixels: ${megaPixels} MP`;
+            `New chunks: ${this.newChunksThisFrame}<br>` +
+            `Pixels: ${megaPixels} MP<br>` +
+            `Estimated Safe Budget: ${safeMP} MP<br>` +
+            `Budget Usage: ${BudgetUsage}%`;
     }
 
     _getIslandCenterIso(island) {
@@ -843,6 +880,9 @@ export class Renderer {
 
     draw()
     {
+        this.newChunksThisFrame = 0;
+        this.uploadsThisFrame = 0;
+        this.debugChunksVisited = 0;
         this.debugChunksRendered = 0;
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -868,6 +908,7 @@ export class Renderer {
             this._drawHoverDiamond(this.hoverTile.x, this.hoverTile.y);
         }
         this._evictChunks();
+        this._coolOtherLODChunks();
         this._updateDebugPanel();
     }
 }
