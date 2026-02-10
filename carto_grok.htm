@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Isometric World</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .debug-panel { position: absolute; background: rgba(0,0,0,0.5); color: white; padding: 5px; font-family: monospace; }
+        #debug-top { top: 10px; left: 50%; transform: translateX(-50%); }
+        #debug-bottom { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        #debug-left { left: 10px; top: 50%; transform: translateY(-50%); }
+        #debug-right { right: 10px; top: 50%; transform: translateY(-50%); }
+        #mouseover { position: absolute; background: rgba(0,0,0,0.5); color: white; padding: 5px; display: none; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="debug-top" class="debug-panel">FPS: 0 | Chunks: 0</div>
+    <div id="debug-bottom" class="debug-panel">Camera: x=0, y=0, zoom=1</div>
+    <div id="debug-left" class="debug-panel">Memory: 0 MB</div>
+    <div id="debug-right" class="debug-panel">Tiles: 0</div>
+    <div id="mouseover"></div>
+    <script type="module">
+        // Perlin Noise Implementation (from search results, adapted from gist)
+        var NOISE = NOISE || {};
+        NOISE.Perlin = (function() {
+            var iOctaves = 1,
+                fPersistence = 0.2,
+                fResult, fFreq, fPers,
+                aOctFreq, // frequency per octave
+                fPersMax, // 1 / max persistence
+                octave;
+
+            var permutation = [151,160,137,91,90,15,
+            131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
+            190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
+            88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
+            77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
+            102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
+            135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
+            5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
+            223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
+            129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
+            251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
+            49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
+            138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
+            ];
+
+            var p = new Array(512);
+            for (var i=0;i < 256 ;i++) {
+                p[256+i] = p[i] = permutation[i];
+            }
+
+            function noise(x, y, z) {
+                var X = Math.floor(x) & 255, // FIND UNIT CUBE THAT
+                    Y = Math.floor(y) & 255, // CONTAINS POINT.
+                    Z = Math.floor(z) & 255;
+                x -= Math.floor(x); // FIND RELATIVE X,Y,Z
+                y -= Math.floor(y); // OF POINT IN CUBE.
+                z -= Math.floor(z);
+                var    u = fade(x), // COMPUTE FADE CURVES
+                       v = fade(y), // FOR EACH OF X,Y,Z.
+                       w = fade(z);
+                var A = p[X  ]+Y, AA = p[A]+Z, AB = p[A+1]+Z, // HASH COORDINATES OF
+                    B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z; // THE 8 CUBE CORNERS,
+
+                return scale(lerp(w, lerp(v, lerp(u, grad(p[AA  ], x  , y  , z   ),  // AND ADD
+                                             grad(p[BA  ], x-1, y  , z   )), // BLENDED
+                                     lerp(u, grad(p[AB  ], x  , y-1, z   ),  // RESULTS
+                                             grad(p[BB  ], x-1, y-1, z   ))),// FROM  8
+                             lerp(v, lerp(u, grad(p[AA+1], x  , y  , z-1 ),  // CORNERS
+                                             grad(p[BA+1], x-1, y  , z-1 )), // OF CUBE
+                                     lerp(u, grad(p[AB+1], x  , y-1, z-1 ),
+                                             grad(p[BB+1], x-1, y-1, z-1 )))));
+            }
+
+            function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
+            function lerp( t, a, b) { return a + t * (b - a); }
+
+            function grad(hash, x, y, z) {
+                var h = hash & 15; // CONVERT LO 4 BITS OF HASH CODE
+                var u = h<8 ? x : y, // INTO 12 GRADIENT DIRECTIONS.
+                       v = h<4 ? y : h==12||h==14 ? x : z;
+                return ((h&1) == 0 ? u : -u) + ((h&2) == 0 ? v : -v);
+            }
+
+            function scale(n) { return (1 + n)/2; }
+
+            function init(octaves, persistence) {
+                iOctaves = octaves || 1;
+                fPersistence = persistence || 0.5;
+                aOctFreq = new Array();
+                var fFreq = 1.0;
+                var fPers = 1.0;
+                fPersMax = 0;
+                for (octave=0; octave < iOctaves; octave++) {
+                    aOctFreq[octave] = fFreq;
+                    fPersMax += fPers;
+                    fFreq *= 2.0;
+                    fPers *= fPersistence;
+                }
+                fPersMax = 1 / fPersMax;
+            }
+
+            function getNoise (x, y, z) {
+                fResult = 0;
+                for (octave=0; octave < iOctaves; octave++) {
+                    fFreq = aOctFreq[octave];
+                    fPers = fPersistence ^ octave;
+                    fResult += noise(x*fFreq, y*fFreq, z*fFreq)*fPers;
+                }
+
+                fResult *= fPersMax;
+
+                return fResult;
+            }
+
+            function PerlinNoise() {}
+            PerlinNoise.prototype = {
+                init: init,
+                noise: getNoise
+            };
+
+            return new PerlinNoise();
+
+        }());
+
+        NOISE.Perlin.init(4, 0.5);
+
+        // Terrain definitions
+        const TERRAINS = {
+            'water': { color: '#0000ff', texRect: [0, 0, 64, 32] },
+            'grass': { color: '#00ff00', texRect: [0, 32, 64, 32] }
+            // Shores 1-15 would be added here, but for simplicity, we use basic types
+            // Extend with 'shore0' to 'shore15' for bitmask 0-15, but bit0 is no shore
+        };
+
+        // For shores, we'll add dynamically
+        for (let i = 1; i < 16; i++) {
+            TERRAINS['shore' + i] = { color: '#c2b280', texRect: [0, 64 + (i-1)*32, 64, 32] }; // Assume tileset has them
+        }
+
+        const TILE_W = 64;
+        const TILE_H = 32;
+        const CHUNK_SIZE = 32;
+        const FREQUENCY = 0.02;
+        const SEA_LEVEL = 0.0;
+        const LOAD_RADIUS = 5; // chunks around camera
+        const HYST_LOW = 0.5;
+        const HYST_HIGH = 0.6;
+        const PREDICT_FACTOR = 2;
+
+        // Worker code as string
+        const workerCode = `
+            ${NOISE.Perlin.toString().replace('function ()', 'function perlin()')} // Adapted
+            const NOISE = perlin();
+            NOISE.init(4, 0.5);
+            const CHUNK_SIZE = ${CHUNK_SIZE};
+            const FREQUENCY = ${FREQUENCY};
+            const SEA_LEVEL = ${SEA_LEVEL};
+            function generateChunk(cx, cy) {
+                let tiles = new Array(CHUNK_SIZE * CHUNK_SIZE);
+                for (let ty = 0; ty < CHUNK_SIZE; ty++) {
+                    for (let tx = 0; tx < CHUNK_SIZE; tx++) {
+                        let x = (cx * CHUNK_SIZE + tx) * FREQUENCY;
+                        let y = (cy * CHUNK_SIZE + ty) * FREQUENCY;
+                        let height = NOISE.noise(x, y, 0);
+                        let type = height < SEA_LEVEL ? 'water' : 'grass';
+                        tiles[ty * CHUNK_SIZE + tx] = type;
+                    }
+                }
+                // Shore pass
+                let temp = tiles.slice();
+                for (let ty = 0; ty < CHUNK_SIZE; ty++) {
+                    for (let tx = 0; tx < CHUNK_SIZE; tx++) {
+                        if (temp[ty * CHUNK_SIZE + tx] === 'grass') {
+                            let bit = 0;
+                            if (ty > 0 && temp[(ty-1) * CHUNK_SIZE + tx] === 'water') bit |= 1; // N
+                            if (tx < CHUNK_SIZE - 1 && temp[ty * CHUNK_SIZE + tx + 1] === 'water') bit |= 2; // E
+                            if (ty < CHUNK_SIZE - 1 && temp[(ty + 1) * CHUNK_SIZE + tx] === 'water') bit |= 4; // S
+                            if (tx > 0 && temp[ty * CHUNK_SIZE + tx - 1] === 'water') bit |= 8; // W
+                            if (bit > 0) {
+                                tiles[ty * CHUNK_SIZE + tx] = 'shore' + bit;
+                            }
+                        }
+                    }
+                }
+                return tiles;
+            }
+            self.onmessage = (e) => {
+                const {cx, cy} = e.data;
+                const tiles = generateChunk(cx, cy);
+                self.postMessage({cx, cy, tiles});
+            };
+        `;
+
+        const workerBlob = new Blob([workerCode], {type: 'application/javascript'});
+        const worker = new Worker(URL.createObjectURL(workerBlob));
+
+        // Main app
+        class InfiniteWorld {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.gl = this.canvas.getContext('webgl2');
+                if (!this.gl) {
+                    alert('WebGL2 not supported');
+                    return;
+                }
+                this.chunks = new Map();
+                this.camera = {x: 0, y: 0, zoom: 1, velocityX: 0, velocityY: 0};
+                this.isPanning = false;
+                this.lastMouseX = 0;
+                this.lastMouseY = 0;
+                this.lodMode = 'high'; // 'high' or 'low'
+                this.debug = {chunks: true, mouseover: true};
+                this.fps = 0;
+                this.lastTime = performance.now();
+                this.frameCount = 0;
+                this.tilesetTex = null;
+                this.fallback = false;
+                this.mouseoverDiv = document.getElementById('mouseover');
+                this.debugTop = document.getElementById('debug-top');
+                this.debugBottom = document.getElementById('debug-bottom');
+                this.debugLeft = document.getElementById('debug-left');
+                this.debugRight = document.getElementById('debug-right');
+
+                this.initEvents();
+                this.initShaders();
+                this.loadTileset();
+                this.setupWorker();
+                this.resize();
+                this.animate();
+            }
+
+            initEvents() {
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.isPanning = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                });
+                window.addEventListener('mouseup', () => this.isPanning = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (this.isPanning) {
+                        const dx = (e.clientX - this.lastMouseX) / this.camera.zoom;
+                        const dy = (e.clientY - this.lastMouseY) / this.camera.zoom;
+                        this.camera.x -= dx;
+                        this.camera.y -= dy;
+                        this.lastMouseX = e.clientX;
+                        this.lastMouseY = e.clientY;
+                        this.camera.velocityX = -dx;
+                        this.camera.velocityY = -dy;
+                    }
+                    this.updateMouseover(e);
+                });
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const mouseBefore = this.screenToWorld(e.clientX, e.clientY);
+                    this.camera.zoom *= Math.pow(1.001, -e.deltaY);
+                    this.camera.zoom = Math.max(0.1, Math.min(10, this.camera.zoom));
+                    const mouseAfter = this.screenToWorld(e.clientX, e.clientY);
+                    this.camera.x += (mouseBefore.x - mouseAfter.x);
+                    this.camera.y += (mouseBefore.y - mouseAfter.y);
+                });
+                window.addEventListener('resize', () => this.resize());
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'd') this.debug.chunks = !this.debug.chunks;
+                });
+            }
+
+            screenToWorld(sx, sy) {
+                const rect = this.canvas.getBoundingClientRect();
+                sx = (sx - rect.left) - this.canvas.width / 2;
+                sy = (sy - rect.top) - this.canvas.height / 2;
+                sx /= this.camera.zoom;
+                sy /= this.camera.zoom;
+                sx += this.camera.x;
+                sy += this.camera.y;
+                const wx = (sx / (TILE_W / 2) + sy / (TILE_H / 2)) / 2;
+                const wy = (sy / (TILE_H / 2) - sx / (TILE_W / 2)) / 2;
+                return {x: wx, y: wy};
+            }
+
+            updateMouseover(e) {
+                const world = this.screenToWorld(e.clientX, e.clientY);
+                const tx = Math.floor(world.x);
+                const ty = Math.floor(world.y);
+                const cx = Math.floor(tx / CHUNK_SIZE);
+                const cy = Math.floor(ty / CHUNK_SIZE);
+                const key = `${cx}_${cy}`;
+                const chunk = this.chunks.get(key);
+                if (chunk && chunk.tiles) {
+                    const ltx = tx - cx * CHUNK_SIZE;
+                    const lty = ty - cy * CHUNK_SIZE;
+                    if (ltx >= 0 && ltx < CHUNK_SIZE && lty >= 0 && lty < CHUNK_SIZE) {
+                        const type = chunk.tiles[lty * CHUNK_SIZE + ltx];
+                        this.mouseoverDiv.innerHTML = `Tile: (${tx},${ty}) Type: ${type}`;
+                        this.mouseoverDiv.style.left = `${e.clientX + 10}px`;
+                        this.mouseoverDiv.style.top = `${e.clientY + 10}px`;
+                        this.mouseoverDiv.style.display = 'block';
+                        return;
+                    }
+                }
+                this.mouseoverDiv.style.display = 'none';
+            }
+
+            initShaders() {
+                const vsSource = `#version 300 es
+                    in vec2 a_localPos;
+                    in vec2 a_instancePos;
+                    in float a_type;
+                    uniform mat3 u_transform;
+                    out vec2 v_uv;
+                    out float v_type;
+                    void main() {
+                        vec2 worldPos = a_instancePos + a_localPos;
+                        vec2 projected = vec2(
+                            (worldPos.x - worldPos.y) * ${TILE_W / 2.0},
+                            (worldPos.x + worldPos.y) * ${TILE_H / 2.0}
+                        );
+                        vec3 transPos = u_transform * vec3(projected, 1.0);
+                        gl_Position = vec4(transPos.xy, 0.0, 1.0);
+                        v_uv = a_localPos;
+                        v_type = a_type;
+                    }
+                `;
+
+                const fsSource = `#version 300 es
+                    precision mediump float;
+                    in vec2 v_uv;
+                    in float v_type;
+                    uniform sampler2D u_tileset;
+                    out vec4 fragColor;
+                    void main() {
+                        // For simplicity, assume type maps to y offset in atlas
+                        vec2 uv = v_uv + vec2(0.0, v_type / 16.0); // Assume 16 types
+                        fragColor = texture(u_tileset, uv);
+                    }
+                `;
+
+                this.program = this.createProgram(vsSource, fsSource);
+                this.locTransform = this.gl.getUniformLocation(this.program, 'u_transform');
+                this.locTileset = this.gl.getUniformLocation(this.program, 'u_tileset');
+            }
+
+            createProgram(vs, fs) {
+                const shaderProgram = this.gl.createProgram();
+                this.gl.attachShader(shaderProgram, this.loadShader(this.gl.VERTEX_SHADER, vs));
+                this.gl.attachShader(shaderProgram, this.loadShader(this.gl.FRAGMENT_SHADER, fs));
+                this.gl.linkProgram(shaderProgram);
+                if (!this.gl.getProgramParameter(shaderProgram, this.gl.LINK_STATUS)) {
+                    console.error('Unable to initialize the shader program: ' + this.gl.getProgramInfoLog(shaderProgram));
+                    return null;
+                }
+                return shaderProgram;
+            }
+
+            loadShader(type, source) {
+                const shader = this.gl.createShader(type);
+                this.gl.shaderSource(shader, source);
+                this.gl.compileShader(shader);
+                if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                    console.error('An error occurred compiling the shaders: ' + this.gl.getShaderInfoLog(shader));
+                    this.gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            }
+
+            loadTileset() {
+                const image = new Image();
+                image.onload = () => {
+                    this.tilesetTex = this.createTexture(image);
+                };
+                image.onerror = () => {
+                    this.fallback = true;
+                    this.createFallbackAtlas();
+                };
+                image.src = 'tileset.png'; // Assume user provides this
+            }
+
+            createFallbackAtlas() {
+                const canvas = document.createElement('canvas');
+                const types = Object.keys(TERRAINS);
+                canvas.width = 64;
+                canvas.height = 32 * types.length;
+                const ctx = canvas.getContext('2d');
+                types.forEach((type, index) => {
+                    ctx.fillStyle = TERRAINS[type].color;
+                    ctx.fillRect(0, index * 32, 64, 32);
+                });
+                this.tilesetTex = this.createTexture(canvas);
+            }
+
+            createTexture(img) {
+                const tex = this.gl.createTexture();
+                this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                return tex;
+            }
+
+            setupWorker() {
+                worker.onmessage = (e) => {
+                    const {cx, cy, tiles} = e.data;
+                    const key = `${cx}_${cy}`;
+                    const chunk = this.chunks.get(key) || new Chunk(cx, cy);
+                    chunk.tiles = tiles;
+                    chunk.buffer = this.createInstanceBuffer(chunk);
+                    this.chunks.set(key, chunk);
+                };
+            }
+
+            createInstanceBuffer(chunk) {
+                const buffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+                const data = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3); // x, y, type
+                let idx = 0;
+                for (let ty = 0; ty < CHUNK_SIZE; ty++) {
+                    for (let tx = 0; tx < CHUNK_SIZE; tx++) {
+                        data[idx++] = chunk.cx * CHUNK_SIZE + tx;
+                        data[idx++] = chunk.cy * CHUNK_SIZE + ty;
+                        let type = chunk.tiles[ty * CHUNK_SIZE + tx];
+                        data[idx++] = Object.keys(TERRAINS).indexOf(type); // numeric type
+                    }
+                }
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, data, this.gl.STATIC_DRAW);
+                return buffer;
+            }
+
+            resize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                this.canvas.width = width;
+                this.canvas.height = height;
+                this.gl.viewport(0, 0, width, height);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const now = performance.now();
+                this.frameCount++;
+                if (now - this.lastTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                }
+
+                this.updateLOD();
+                this.loadVisibleChunks();
+                this.evictFarChunks();
+                this.render();
+
+                this.updateDebug();
+            }
+
+            updateLOD() {
+                if (this.camera.zoom < HYST_LOW && this.lodMode === 'high') this.lodMode = 'low';
+                if (this.camera.zoom > HYST_HIGH && this.lodMode === 'low') this.lodMode = 'high';
+            }
+
+            loadVisibleChunks() {
+                const corners = [
+                    this.screenToWorld(0, 0),
+                    this.screenToWorld(this.canvas.width, 0),
+                    this.screenToWorld(0, this.canvas.height),
+                    this.screenToWorld(this.canvas.width, this.canvas.height)
+                ];
+                let minWx = Math.min(...corners.map(c => c.x));
+                let maxWx = Math.max(...corners.map(c => c.x));
+                let minWy = Math.min(...corners.map(c => c.y));
+                let maxWy = Math.max(...corners.map(c => c.y));
+
+                const extraX = this.camera.velocityX > 0 ? PREDICT_FACTOR : -PREDICT_FACTOR;
+                const extraY = this.camera.velocityY > 0 ? PREDICT_FACTOR : -PREDICT_FACTOR;
+                minWx -= LOAD_RADIUS + (this.camera.velocityX < 0 ? extraX : 0);
+                maxWx += LOAD_RADIUS + (this.camera.velocityX > 0 ? extraX : 0);
+                minWy -= LOAD_RADIUS + (this.camera.velocityY < 0 ? extraY : 0);
+                maxWy += LOAD_RADIUS + (this.camera.velocityY > 0 ? extraY : 0);
+
+                const minCx = Math.floor(minWx / CHUNK_SIZE);
+                const maxCx = Math.floor(maxWx / CHUNK_SIZE);
+                const minCy = Math.floor(minWy / CHUNK_SIZE);
+                const maxCy = Math.floor(maxWy / CHUNK_SIZE);
+
+                for (let cy = minCy; cy <= maxCy; cy++) {
+                    for (let cx = minCx; cx <= maxCx; cx++) {
+                        const key = `${cx}_${cy}`;
+                        if (!this.chunks.has(key)) {
+                            this.chunks.set(key, new Chunk(cx, cy));
+                            worker.postMessage({cx, cy});
+                        }
+                    }
+                }
+            }
+
+            evictFarChunks() {
+                const centerCx = Math.floor(this.camera.x / CHUNK_SIZE);
+                const centerCy = Math.floor(this.camera.y / CHUNK_SIZE);
+                for (let [key, chunk] of this.chunks) {
+                    if (Math.abs(chunk.cx - centerCx) > LOAD_RADIUS * 2 || Math.abs(chunk.cy - centerCy) > LOAD_RADIUS * 2) {
+                        if (chunk.buffer) this.gl.deleteBuffer(chunk.buffer);
+                        this.chunks.delete(key);
+                    }
+                }
+            }
+
+            render() {
+                this.gl.clearColor(0.1, 0.1, 0.1, 1.0);
+                this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+                if (!this.tilesetTex) return;
+
+                this.gl.useProgram(this.program);
+                this.gl.activeTexture(this.gl.TEXTURE0);
+                this.gl.bindTexture(this.gl.TEXTURE_2D, this.tilesetTex);
+                this.gl.uniform1i(this.locTileset, 0);
+
+                // Transform matrix
+                const transform = new Float32Array(9);
+                transform[0] = 2 / this.canvas.width;
+                transform[4] = -2 / this.canvas.height;
+                transform[8] = 1;
+                // Apply zoom and pan
+                transform[0] *= this.camera.zoom;
+                transform[4] *= this.camera.zoom;
+                transform[6] = -this.camera.x * this.camera.zoom * transform[0] - 1;
+                transform[7] = -this.camera.y * this.camera.zoom * transform[4] + 1;
+                this.gl.uniformMatrix3fv(this.locTransform, false, transform);
+
+                // Setup quad verts
+                const quadBuffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, quadBuffer);
+                const quadData = new Float32Array([
+                    0, 0,
+                    1, 0,
+                    0, 1,
+                    1, 1
+                ]);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, quadData, this.gl.STATIC_DRAW);
+                const locLocalPos = this.gl.getAttribLocation(this.program, 'a_localPos');
+                this.gl.enableVertexAttribArray(locLocalPos);
+                this.gl.vertexAttribPointer(locLocalPos, 2, this.gl.FLOAT, false, 0, 0);
+
+                for (let chunk of this.chunks.values()) {
+                    if (!chunk.tiles || !chunk.buffer) continue;
+
+                    if (this.lodMode === 'low') {
+                        // Low LOD: draw chunk as single quad with average color
+                        // For simplicity, skip detailed impl, draw as water or something
+                        continue;
+                    }
+
+                    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, chunk.buffer);
+                    const locInstancePos = this.gl.getAttribLocation(this.program, 'a_instancePos');
+                    const locType = this.gl.getAttribLocation(this.program, 'a_type');
+                    this.gl.enableVertexAttribArray(locInstancePos);
+                    this.gl.enableVertexAttribArray(locType);
+                    this.gl.vertexAttribPointer(locInstancePos, 2, this.gl.FLOAT, false, 12, 0);
+                    this.gl.vertexAttribPointer(locType, 1, this.gl.FLOAT, false, 12, 8);
+                    this.gl.vertexAttribDivisor(locInstancePos, 1);
+                    this.gl.vertexAttribDivisor(locType, 1);
+
+                    this.gl.drawArraysInstanced(this.gl.TRIANGLE_STRIP, 0, 4, CHUNK_SIZE * CHUNK_SIZE);
+                }
+
+                // Debug chunks
+                if (this.debug.chunks) {
+                    // Impl line drawing for boundaries, skip for brevity
+                }
+            }
+
+            updateDebug() {
+                this.debugTop.innerHTML = `FPS: ${this.fps} | Chunks: ${this.chunks.size}`;
+                this.debugBottom.innerHTML = `Camera: x=${this.camera.x.toFixed(2)}, y=${this.camera.y.toFixed(2)}, zoom=${this.camera.zoom.toFixed(2)}`;
+                this.debugLeft.innerHTML = `LOD: ${this.lodMode}`;
+                this.debugRight.innerHTML = `Tiles: ${this.chunks.size * CHUNK_SIZE * CHUNK_SIZE}`;
+            }
+        }
+
+        class Chunk {
+            constructor(cx, cy) {
+                this.cx = cx;
+                this.cy = cy;
+                this.tiles = null;
+                this.buffer = null;
+            }
+        }
+
+        new InfiniteWorld();
+    </script>
+</body>
+</html>

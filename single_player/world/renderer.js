@@ -16,16 +16,24 @@ const MAX_CHUNKS_PER_FRAME = 400; // tune later
 const BASE_CHUNK_SIZE = 16;
 
 export class Renderer {
-    constructor(canvas, camera, world) {
+/////////////////////////////////////////////////////////////////////////////////
+    constructor(glCanvas, uiCanvas, camera, world) {
         this.gpuInfo = null;
-        this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
+        this.glCanvas = glCanvas;
+        this.uiCanvas = uiCanvas;
         this.camera = camera;
         this.world = world;
+
+        this.gl = glCanvas.getContext("webgl", { alpha: false });
+    
+        if (!this.gl) {
+            throw new Error("WebGL not supported");
+        }
+        this._initQuadProgram();
       
-        this.debugDrawChunkBoundaries = true;
-        this.debugDrawChunkDiamonds = true;
-        this.debugDrawIslandBounds = true;
+        this.debugDrawChunkBoundaries = false;
+        this.debugDrawChunkDiamonds = false;
+        this.debugDrawIslandBounds = false;
         this.debugDrawGrids = false;
 
         this.debugChunksRendered = 0;
@@ -65,11 +73,104 @@ export class Renderer {
             TILE_COLORS
         });
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     async init() {
         this.gpuInfo = await this._estimateGpuTier();
     }
-
+/////////////////////////////////////////////////////////////////////////////////
+    _initQuadProgram() {
+        const gl = this.gl;
+    
+        const vsSource = `
+            attribute vec2 a_pos;
+            attribute vec2 a_tex;
+            uniform vec2 u_resolution;
+            varying vec2 v_tex;
+    
+            void main() {
+                vec2 zeroToOne = a_pos / u_resolution;
+                vec2 clip = zeroToOne * 2.0 - 1.0;
+                gl_Position = vec4(clip * vec2(1.0, -1.0), 0.0, 1.0);
+                v_tex = a_tex;
+            }
+        `;
+    
+        const fsSource = `
+            precision mediump float;
+            varying vec2 v_tex;
+            uniform sampler2D u_tex;
+    
+            void main() {
+                gl_FragColor = texture2D(u_tex, v_tex);
+            }
+        `;
+    
+        const compile = (type, src) => {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            return s;
+        };
+    
+        const vs = compile(gl.VERTEX_SHADER, vsSource);
+        const fs = compile(gl.FRAGMENT_SHADER, fsSource);
+    
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+    
+        this.quadProgram = prog;
+        this.quadBuffer = gl.createBuffer();
+    
+        this.a_pos = gl.getAttribLocation(prog, "a_pos");
+        this.a_tex = gl.getAttribLocation(prog, "a_tex");
+        this.u_resolution = gl.getUniformLocation(prog, "u_resolution");
+        this.u_tex = gl.getUniformLocation(prog, "u_tex");
+    }
+/////////////////////////////////////////////////////////////////////////////////
+    _drawTexturedQuad(tex, x, y, w, h) {
+        const gl = this.gl;
+    
+        gl.useProgram(this.quadProgram);
+    
+        gl.uniform2f(this.u_resolution, this.glCanvas.width, this.glCanvas.height);
+    
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.uniform1i(this.u_tex, 0);
+    
+        // x,y in screen space
+        const x1 = x;
+        const y1 = y;
+        const x2 = x + w;
+        const y2 = y + h;
+    
+        // interleaved: pos(x,y), tex(u,v)
+        const verts = new Float32Array([
+            // tri 1
+            x1, y1, 0, 0,
+            x2, y1, 1, 0,
+            x1, y2, 0, 1,
+            // tri 2
+            x1, y2, 0, 1,
+            x2, y1, 1, 0,
+            x2, y2, 1, 1
+        ]);
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
+    
+        const stride = 4 * 4; // 4 floats per vertex * 4 bytes
+        gl.enableVertexAttribArray(this.a_pos);
+        gl.vertexAttribPointer(this.a_pos, 2, gl.FLOAT, false, stride, 0);
+    
+        gl.enableVertexAttribArray(this.a_tex);
+        gl.vertexAttribPointer(this.a_tex, 2, gl.FLOAT, false, stride, 2 * 4);
+    
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+/////////////////////////////////////////////////////////////////////////////////
     async _estimateGpuTier() {
         const canvas = document.createElement("canvas");
         const gl = canvas.getContext("webgl");
@@ -90,7 +191,7 @@ export class Renderer {
     
         return { tier, maxTex, renderer };
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _getSafeMpBudget() {
         switch (this.gpuInfo.tier) {
             case "low":  return 800;
@@ -99,7 +200,7 @@ export class Renderer {
             default:     return 800;
         }
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _onChunkWorkerMessage(e) {
         try {
             //console.log("Renderer got worker message", e.data);
@@ -107,6 +208,7 @@ export class Renderer {
             const key = `LOD${lod}:${islandId}:${cx},${cy}`;
             this.chunkCache.set(key, {
                 bitmap,
+                glTexture: null,
                 lastUsed: performance.now(),
                 screenX: 0,
                 screenY: 0,
@@ -118,7 +220,31 @@ export class Renderer {
             console.error("Error in _onChunkWorkerMessage:", err);
         }
     }
-
+/////////////////////////////////////////////////////////////////////////////////
+    _uploadChunkTexture(entry) {
+        const gl = this.gl;
+    
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+    
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            entry.bitmap
+        );
+    
+        entry.glTexture = tex;
+        this.uploadsThisFrame++;
+    }
+/////////////////////////////////////////////////////////////////////////////////
     _getTile(worldX, worldY) {
         for (const island of this.world.islands) {
             const localX = worldX - island.originX;
@@ -134,7 +260,7 @@ export class Renderer {
         }
         return null;
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _scheduleDraw() {
         if (this._drawScheduled) return;
         this._drawScheduled = true;
@@ -144,10 +270,10 @@ export class Renderer {
             this.draw();
         });
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _setupMouseMove() {
         const mouseMove = (e) => {
-            const rect = this.canvas.getBoundingClientRect();
+            const rect = this.uiCanvas.getBoundingClientRect();
             const sx = e.clientX - rect.left;
             const sy = e.clientY - rect.top;
     
@@ -161,23 +287,25 @@ export class Renderer {
     
         window.addEventListener("mousemove", mouseMove);
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _getChunkSize() {
         const lod = this._getActiveLOD();
         return lod.chunkSize;
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _setupResize() {
         const resize = () => {
             const dpr = window.devicePixelRatio || 1;
-            this.canvas.width = window.innerWidth * dpr;
-            this.canvas.height = window.innerHeight * dpr;
-            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            this.uiCanvas.width = window.innerWidth * dpr;
+            this.uiCanvas.height = window.innerHeight * dpr;
+            this.glCanvas.width = window.innerWidth * dpr;
+            this.glCanvas.height = window.innerHeight * dpr;
+            this.gl.viewport(0, 0, this.glCanvas.width, this.glCanvas.height);
         };
         window.addEventListener("resize", resize);
         resize();
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _getActiveLOD() {
         const scale = this.camera.scale;
         const tw = TILE_WIDTH;
@@ -204,14 +332,14 @@ export class Renderer {
         // Default to the last LOD
         return LOD_LEVELS[LOD_LEVELS.length - 1];
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _getLODTile(island, worldX, worldY, lod) {
         const step = lod.sampleStep;
         const sx = Math.floor(worldX / step) * step;
         const sy = Math.floor(worldY / step) * step;
         return this._getTile(sx, sy);
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _getOrCreateChunkBitmap(island, cx, cy) {
         const lod = this._getActiveLOD();
         const key = `LOD${lod.id}:${island.id}:${cx},${cy}`;
@@ -245,7 +373,7 @@ export class Renderer {
         // Not ready yet
         return null;
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _sampleChunkTiles(island, cx, cy, lod) {
         const step = lod.sampleStep;
         const chunkSize = lod.chunkSize;
@@ -268,7 +396,7 @@ export class Renderer {
     
         return { tileData, lodTiles };
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _evictChunks() {
         const cache = this.chunkCache;
     
@@ -292,7 +420,7 @@ export class Renderer {
             // --- 1. Never evict visible chunks ---
             const visible = this._rectsIntersect(
                 entry.screenX, entry.screenY, entry.screenW, entry.screenH,
-                0, 0, this.canvas.width, this.canvas.height
+                0, 0, this.glCanvas.width, this.glCanvas.height
             );
             if (visible) return false;
     
@@ -300,10 +428,10 @@ export class Renderer {
             // Define a large "nearby" region around the viewport
             const near = this._rectsIntersect(
                 entry.screenX, entry.screenY, entry.screenW, entry.screenH,
-                -this.canvas.width * nrProxFact,
-                -this.canvas.height * nrProxFact,
-                this.canvas.width * (nrProxFact * 2 + 1),
-                this.canvas.height * (nrProxFact * 2 + 1)
+                -this.glCanvas.width * nrProxFact,
+                -this.glCanvas.height * nrProxFact,
+                this.glCanvas.width * (nrProxFact * 2 + 1),
+                this.glCanvas.height * (nrProxFact * 2 + 1)
             );
             if (near) return false;
     
@@ -331,7 +459,7 @@ export class Renderer {
     
         this.debugChunksCached = cache.size;
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _coolOtherLODChunks() {
         const now = performance.now();
         const activeLOD = this._getActiveLOD().id;
@@ -365,14 +493,14 @@ export class Renderer {
             this.chunkCache.delete(candidates[i]);
         }
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     screenToWorldTile(sx, sy) {
         const scale = this.camera.scale;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
     
-        const screenW = this.canvas.width;
-        const screenH = this.canvas.height;
+        const screenW = this.glCanvas.width;
+        const screenH = this.glCanvas.height;
     
         // Convert screen → iso space
         const isoX = (sx - screenW / 2) / scale + this.camera.x;
@@ -384,14 +512,13 @@ export class Renderer {
     
         return { x: worldX, y: worldY };
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _renderChunk(island, cx, cy) {
         this.debugChunksVisited++;
         if (this.debugChunksRendered >= MAX_CHUNKS_PER_FRAME) {
             return;
         }
         const scale = this.camera.scale;
-        const ctx = this.ctx;
     
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
@@ -417,12 +544,12 @@ export class Renderer {
         // Screen-space placement
         const screenX =
             (isoX - this.camera.x) * scale +
-            this.canvas.width / 2 -
+            this.glCanvas.width / 2 -
             originX * scale;
     
         const screenY =
             (isoY - this.camera.y) * scale +
-            this.canvas.height / 2 -
+            this.glCanvas.height / 2 -
             originY * scale;
     
         const screenW = chunkPixelWidth * scale;
@@ -442,14 +569,14 @@ export class Renderer {
         // CULL BEFORE CREATING BITMAP
         const warmProxFactor = 2;
         if (!this._rectsIntersect(screenX, screenY, screenW, screenH,
-                                  0, 0, this.canvas.width, this.canvas.height)) {
+                                  0, 0, this.glCanvas.width, this.glCanvas.height)) {
             // Warm nearby chunks
             const warm = this._rectsIntersect(
                 screenX, screenY, screenW, screenH,
-                -this.canvas.width * warmProxFactor,
-                -this.canvas.height * warmProxFactor,
-                this.canvas.width * (warmProxFactor * 2 + 1),
-                this.canvas.height * (warmProxFactor * 2 + 1)
+                -this.glCanvas.width * warmProxFactor,
+                -this.glCanvas.height * warmProxFactor,
+                this.glCanvas.width * (warmProxFactor * 2 + 1),
+                this.glCanvas.height * (warmProxFactor * 2 + 1)
             );
             if (!warm) {
                 return;
@@ -465,7 +592,7 @@ export class Renderer {
 
         if (!this._rectsIntersect(
             screenX, screenY, screenW, screenH,
-            0, 0, this.canvas.width, this.canvas.height
+            0, 0, this.glCanvas.width, this.glCanvas.height
         )) {
             return;
         }
@@ -478,14 +605,11 @@ export class Renderer {
 
         this.debugChunksRendered++;
     
-        // Draw chunk
-        ctx.drawImage(
-            chunkCanvas,
-            0, 0, chunkCanvas.width, chunkCanvas.height,
-            screenX, screenY,
-            chunkPixelWidth * scale,
-            chunkPixelHeight * scale
-        );
+        if (!entry.glTexture) {
+            this._uploadChunkTexture(entry);
+        }
+        // now draw using the texture (your existing quad shader path)
+        this._drawTexturedQuad(entry.glTexture, entry.screenX, entry.screenY, entry.screenW, entry.screenH);
     
         // Debug overlays
         if (this.debugDrawChunkBoundaries) {
@@ -502,7 +626,7 @@ export class Renderer {
             this._debugDrawChunkDiamondBoundary(island, cx, cy);
         }
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _drawIsoTileChunk(ctx, tile, isoCenterX, isoCenterY, w, h) {
         const leftX   = isoCenterX - w / 2;
         const rightX  = isoCenterX + w / 2;
@@ -519,9 +643,9 @@ export class Renderer {
         ctx.closePath();
         ctx.fill();
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _debugDrawChunkDiamondBoundary(island, cx, cy) {
-        const ctx = this.ctx;
+        const ctx = this.uiCanvas.getContext("2d");
         const scale = this.camera.scale;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
@@ -550,8 +674,8 @@ export class Renderer {
             const isoY = (tx + ty) * (th / 2) - (th / 2);
     
             return {
-                x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
-                y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+                x: (isoX - this.camera.x) * scale + this.glCanvas.width / 2,
+                y: (isoY - this.camera.y) * scale + this.glCanvas.height / 2
             };
         };
     
@@ -571,9 +695,23 @@ export class Renderer {
         ctx.closePath();
         ctx.stroke();
     }
-
+/////////////////////////////////////////////////////////////////////////////////
+    _drawRect(x, y, w, h, r, g, b, a = 1) {
+        // top
+        this._drawLine(x,     y,     x + w, y,     r, g, b, a);
+        // right
+        this._drawLine(x + w, y,     x + w, y + h, r, g, b, a);
+        // bottom
+        this._drawLine(x + w, y + h, x,     y + h, r, g, b, a);
+        // left
+        this._drawLine(x,     y + h, x,     y,     r, g, b, a);
+    }
+/////////////////////////////////////////////////////////////////////////////////
     _debugDrawChunkBoundary(label, screenX, screenY, w, h) {
-        const ctx = this.ctx;
+
+        //this._drawRect(screenX, screenY, w, h, 255, 0, 0, 0.6);
+
+        const ctx = this.uiCanvas.getContext("2d");
 
         ctx.strokeStyle = "rgba(255, 0, 0, 0.6)";
         ctx.lineWidth = 1;
@@ -583,12 +721,13 @@ export class Renderer {
         ctx.font = "12px monospace";
         ctx.fillText(label, screenX + 4, screenY + 14);
     }
-
+/////////////////////////////////////////////////////////////////////////////////
     _drawIslandBounds() {
-        const ctx = this.ctx;
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
+        
+        const ctx = this.uiCanvas.getContext("2d");
     
         ctx.strokeStyle = "rgba(0, 200, 255, 0.7)";
         ctx.lineWidth = 2;
@@ -619,8 +758,8 @@ export class Renderer {
                 const isoY = (pt.x + pt.y) * (th / 2) - (th / 2);
     
                 return {
-                    x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
-                    y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+                    x: (isoX - this.camera.x) * scale + this.glCanvas.width / 2,
+                    y: (isoY - this.camera.y) * scale + this.glCanvas.height / 2
                 };
             });
     
@@ -639,7 +778,8 @@ export class Renderer {
     }
 
     _drawHoverDiamond(tx, ty) {
-        const ctx = this.ctx;
+        return;
+        const ctx = this.uiCanvas.getContext("2d");
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
@@ -662,8 +802,8 @@ export class Renderer {
             const isoY = (wx + wy) * (th / 2) - (th / 2);
     
             return {
-                x: (isoX - this.camera.x) * scale + this.canvas.width / 2,
-                y: (isoY - this.camera.y) * scale + this.canvas.height / 2
+                x: (isoX - this.camera.x) * scale + this.glCanvas.width / 2,
+                y: (isoY - this.camera.y) * scale + this.glCanvas.height / 2
             };
         };
     
@@ -690,13 +830,13 @@ export class Renderer {
     }
 
     _debugDrawIsoGrid() {
-        const ctx = this.ctx;
+        const ctx = this.uiCanvas.getContext("2d");
         const tw = TILE_WIDTH;
         const th = TILE_HEIGHT;
         const scale = this.camera.scale;
     
-        const screenW = this.canvas.width;
-        const screenH = this.canvas.height;
+        const screenW = this.glCanvas.width;
+        const screenH = this.glCanvas.height;
     
         // Convert screen → world tile space
         const toWorld = (sx, sy) => {
@@ -746,6 +886,24 @@ export class Renderer {
                 ctx.stroke();
             }
         }
+    }
+
+    _drawLine(x1, y1, x2, y2, r, g, b, a = 1) {
+        const gl = this.gl;
+    
+        gl.useProgram(this.debugLineProgram);
+    
+        gl.uniform2f(this.u_resolution, this.glCanvas.width, this.glCanvas.height);
+        gl.uniform4f(this.u_color, r, g, b, a);
+    
+        const verts = new Float32Array([x1, y1, x2, y2]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.debugLineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
+    
+        gl.enableVertexAttribArray(this.a_pos);
+        gl.vertexAttribPointer(this.a_pos, 2, gl.FLOAT, false, 0, 0);
+    
+        gl.drawArrays(gl.LINES, 0, 2);
     }
 
     _rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -825,6 +983,7 @@ export class Renderer {
             `LOD cache: ${lodSummary}<br>` +
             `Zoom: ${zoom}<br>` +
             `New chunks: ${this.newChunksThisFrame}<br>` +
+            `Uploads: ${this.uploadsThisFrame}<br>` +
             `Pixels: ${megaPixels} MP<br>` +
             `Estimated Safe Budget: ${safeMP} MP<br>` +
             `Budget Usage: ${BudgetUsage}%`;
@@ -844,7 +1003,8 @@ export class Renderer {
     }
 
     _drawIslandConnections() {
-        const ctx = this.ctx;
+        return;
+        const ctx = this.uiCanvas.getContext("2d");
         const scale = this.camera.scale;
     
         ctx.lineWidth = 1;
@@ -862,10 +1022,10 @@ export class Renderer {
                 const b = this._getIslandCenterIso(target);
     
                 // Convert to screen
-                const ax = (a.isoX - this.camera.x) * scale + this.canvas.width / 2;
-                const ay = (a.isoY - this.camera.y) * scale + this.canvas.height / 2;
-                const bx = (b.isoX - this.camera.x) * scale + this.canvas.width / 2;
-                const by = (b.isoY - this.camera.y) * scale + this.canvas.height / 2;
+                const ax = (a.isoX - this.camera.x) * scale + this.glCanvas.width / 2;
+                const ay = (a.isoY - this.camera.y) * scale + this.glCanvas.height / 2;
+                const bx = (b.isoX - this.camera.x) * scale + this.glCanvas.width / 2;
+                const by = (b.isoY - this.camera.y) * scale + this.glCanvas.height / 2;
     
                 ctx.beginPath();
                 ctx.moveTo(ax, ay);
@@ -884,8 +1044,11 @@ export class Renderer {
         this.uploadsThisFrame = 0;
         this.debugChunksVisited = 0;
         this.debugChunksRendered = 0;
-        const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        const gl = this.gl;
+        gl.clearColor(26/255, 26/255, 26/255, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
         const chunkSize = this._getChunkSize();
         for (const island of this.world.islands) {
             const lodChunksX = Math.ceil(island.width  / chunkSize);
