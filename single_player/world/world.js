@@ -6,13 +6,11 @@ export class World {
     constructor(worldData) {
         this.data = worldData;
 
-        this.glCanvas = document.getElementById("glCanvas");
-        this.uiCanvas = document.getElementById("uiCanvas");
-        this.camera = new Camera(this.glCanvas);
+        this.canvas = document.getElementById("game");
+        this.camera = new Camera(this.canvas);
 
         this.renderer = new Renderer(
-            this.glCanvas,
-            this.uiCanvas,
+            this.canvas,
             this.camera,
             this.data
         );

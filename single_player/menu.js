@@ -120,10 +120,8 @@ function showMenuElements()
 {
   const root = document.getElementById("menu-root");
   root.style.display = "flex";
-  const glCanvas = document.getElementById("glCanvas");
-  glCanvas.style.display = "none";
-  const uiCanvas = document.getElementById("uiCanvas");
-  uiCanvas.style.display = "none";
+  const canvas = document.getElementById("game");
+  canvas.style.display = "none";
   const debug_panel = document.getElementById("debug-panel");
   debug_panel.style.display = "none";
 }
@@ -132,10 +130,8 @@ function showWorldElements()
 {
   const root = document.getElementById("menu-root");
   root.style.display = "none";
-  const glCanvas = document.getElementById("glCanvas");
-  glCanvas.style.display = "block";
-  const uiCanvas = document.getElementById("uiCanvas");
-  //uiCanvas.style.display = "block";
+  const canvas = document.getElementById("game");
+  canvas.style.display = "block";
   const debug_panel = document.getElementById("debug-panel");
   debug_panel.style.display = "block";
 }
